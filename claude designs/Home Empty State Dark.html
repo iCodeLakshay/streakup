@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreakUp — Home Empty State</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #111111;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Sans', sans-serif;
+    }
+    @keyframes mountIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes floatUp {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-6px); }
+    }
+    @keyframes fabPop {
+      0%   { transform: scale(0.7); opacity: 0; }
+      70%  { transform: scale(1.08); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    /* ── Nav icons ───────────────────────────────────────────────────────── */
+    function NavFlame({ active }) {
+      const c = active ? '#FF740D' : '#BDBDBD';
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2c0 6-6 8-6 14a6 6 0 0 0 12 0c0-6-6-8-6-14z"
+            fill={active ? '#FF740D' : 'none'}
+            stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          {active && <path d="M12 11c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z"
+            fill="white" opacity="0.4" stroke="none"/>}
+        </svg>
+      );
+    }
+
+    function NavBar({ color }) {
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      );
+    }
+
+    function NavGear({ color }) {
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      );
+    }
+
+    /* ── Empty flame illustration ────────────────────────────────────────── */
+    function EmptyFlame({ strokeColor = '#DEDBD7' }) {
+      return (
+        <svg width="120" height="148" viewBox="0 0 120 148" fill="none"
+          style={{ animation: 'floatUp 4s ease-in-out infinite' }}>
+          <path
+            d="M60 8 C60 8 86 34 90 58 C95 76 90 94 82 105 C74 116 66 120 60 122 C54 120 46 116 38 105 C30 94 25 76 30 58 C34 34 60 8 60 8Z"
+            stroke={strokeColor} strokeWidth="3.5" strokeLinejoin="round"
+            fill="none" strokeDasharray="6 4" strokeLinecap="round"
+          />
+          <circle cx="60" cy="97" r="9"
+            stroke={strokeColor} strokeWidth="2.5" fill="none" />
+          <path d="M54 60 Q60 48 66 60 Q72 72 60 80 Q48 72 54 60Z"
+            stroke={strokeColor} strokeWidth="2" fill="none" strokeLinejoin="round"/>
+        </svg>
+      );
+    }
+
+    /* ── Home screen ─────────────────────────────────────────────────────── */
+    function HomeScreen({ dark = false }) {
+      const [mounted, setMounted] = useState(false);
+      useEffect(() => { const t = setTimeout(() => setMounted(true), 60); return () => clearTimeout(t); }, []);
+
+      const bg        = dark ? '#1A1A1A' : '#FFFFFF';
+      const cardBg    = dark ? '#2A2A2A' : '#FFF8F0';
+      const cardBorder= dark ? '#383838' : 'rgba(255,116,13,0.14)';
+      const navBg     = dark ? '#2A2A2A' : '#FFFFFF';
+      const navBorder = dark ? '#333333' : '#F0EDE8';
+      const textPri   = dark ? '#F5F5F5' : '#1A1A1A';
+      const textSec   = dark ? '#666666' : '#A89F95';
+      const textMuted = dark ? '#9E9E9E' : '#BDBDBD';
+      const emptyStroke = dark ? '#444444' : '#DEDBD7';
+      const subtitleCard = dark ? '#888888' : '#A89F95';
+
+      const anim = (delay) => ({
+        opacity:   mounted ? 1 : 0,
+        transform: mounted ? 'translateY(0)' : 'translateY(10px)',
+        transition: `opacity 0.45s ease ${delay}ms, transform 0.45s ease ${delay}ms`,
+      });
+
+      return (
+        <div style={{
+          width: '100%', height: '100%',
+          background: bg,
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+          paddingTop: 54,
+          position: 'relative',
+        }}>
+
+          {/* ── Header ── */}
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 20px 0',
+            ...anim(0),
+          }}>
+            <div>
+              <p style={{
+                fontSize: 13, fontWeight: 500, color: textMuted,
+                fontFamily: 'DM Sans, sans-serif', marginBottom: 2,
+              }}>Monday, May 5</p>
+              <h2 style={{
+                fontFamily: 'DM Serif Display, serif',
+                fontSize: 22, fontWeight: 400,
+                color: textPri, lineHeight: 1.2,
+              }}>Good morning 👋</h2>
+            </div>
+            {/* Avatar */}
+            <div style={{
+              width: 42, height: 42, borderRadius: 21,
+              background: '#FF740D',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <span style={{
+                fontSize: 16, fontWeight: 700, color: '#FFFFFF',
+                fontFamily: 'DM Sans, sans-serif',
+              }}>A</span>
+            </div>
+          </div>
+
+          {/* ── Summary card ── */}
+          <div style={{
+            margin: '16px 20px 0',
+            background: cardBg,
+            borderRadius: 16,
+            border: `1.5px solid ${cardBorder}`,
+            padding: '16px 18px',
+            boxShadow: dark ? 'none' : '0 1px 6px rgba(255,116,13,0.07)',
+            ...anim(100),
+          }}>
+            <p style={{
+              fontSize: 16, fontWeight: 600, color: textPri,
+              fontFamily: 'DM Sans, sans-serif', lineHeight: 1.3,
+            }}>Start your first streak today 🔥</p>
+            <p style={{
+              fontSize: 13.5, fontWeight: 400, color: subtitleCard,
+              fontFamily: 'DM Sans, sans-serif', marginTop: 4, lineHeight: 1.4,
+            }}>Add a habit to begin tracking.</p>
+          </div>
+
+          {/* ── Empty state ── */}
+          <div style={{
+            flex: 1,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: 14,
+            paddingBottom: 80,
+            ...anim(200),
+          }}>
+            <EmptyFlame strokeColor={emptyStroke} />
+            <div style={{ textAlign: 'center' }}>
+              <p style={{
+                fontSize: 18, fontWeight: 600, color: textMuted,
+                fontFamily: 'DM Sans, sans-serif', lineHeight: 1.3,
+              }}>No habits yet.</p>
+              <p style={{
+                fontSize: 14, fontWeight: 400, color: textMuted,
+                fontFamily: 'DM Sans, sans-serif', marginTop: 4,
+                opacity: 0.7,
+              }}>Tap + to add your first habit</p>
+            </div>
+          </div>
+
+          {/* ── Bottom nav ── */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            height: 82,
+            background: navBg,
+            borderTop: `1px solid ${navBorder}`,
+            display: 'flex', alignItems: 'flex-start',
+            justifyContent: 'space-around',
+            paddingTop: 12,
+            zIndex: 10,
+          }}>
+            {/* Home */}
+            <button style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            }}>
+              <NavFlame active={true} />
+              <span style={{
+                fontSize: 10.5, fontWeight: 600, color: '#FF740D',
+                fontFamily: 'DM Sans, sans-serif',
+              }}>Home</span>
+            </button>
+            {/* Stats */}
+            <button style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            }}>
+              <NavBar color={dark ? '#555555' : '#BDBDBD'} />
+              <span style={{
+                fontSize: 10.5, fontWeight: 400, color: dark ? '#555555' : '#BDBDBD',
+                fontFamily: 'DM Sans, sans-serif',
+              }}>Stats</span>
+            </button>
+            {/* Settings */}
+            <button style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            }}>
+              <NavGear color={dark ? '#555555' : '#BDBDBD'} />
+              <span style={{
+                fontSize: 10.5, fontWeight: 400, color: dark ? '#555555' : '#BDBDBD',
+                fontFamily: 'DM Sans, sans-serif',
+              }}>Settings</span>
+            </button>
+          </div>
+
+          {/* ── FAB ── */}
+          <button style={{
+            position: 'absolute',
+            bottom: 96,
+            right: 20,
+            width: 56, height: 56, borderRadius: 28,
+            background: '#FF740D',
+            border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 3px 10px rgba(255,116,13,0.30)',
+            animation: 'fabPop 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards',
+            zIndex: 20,
+          }}
+          onMouseDown={e => e.currentTarget.style.transform = 'scale(0.93)'}
+          onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="white" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+          </button>
+
+        </div>
+      );
+    }
+
+    /* ── Root ─────────────────────────────────────────────────────────────── */
+    function App() {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          minHeight: '100vh', width: '100%', background: '#111111',
+        }}>
+          <IOSDevice width={390} height={844} dark={true}>
+            <HomeScreen dark={true} />
+          </IOSDevice>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

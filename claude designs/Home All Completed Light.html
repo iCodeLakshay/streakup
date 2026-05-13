@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreakUp — 2.10 Home: All Habits Completed (Light)</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #D8D4CF;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    @keyframes fabPop {
+      0%   { transform: scale(0.7); opacity: 0; }
+      70%  { transform: scale(1.08); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes cardFadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes headerSlideDown {
+      from { opacity: 0; transform: translateY(-12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes barFill {
+      from { width: 0%; }
+      to   { width: 100%; }
+    }
+    @keyframes ringBurst {
+      0%   { transform: scale(0.5); opacity: 0; }
+      60%  { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+    /* Confetti fall — frozen at midpoint via paused + fill-both */
+    @keyframes cfall1 { 0%{transform:translate(0,0) rotate(0deg);opacity:1}  100%{transform:translate(-14px,110px) rotate(210deg);opacity:.7} }
+    @keyframes cfall2 { 0%{transform:translate(0,0) rotate(0deg);opacity:1}  100%{transform:translate(20px,90px)  rotate(-180deg);opacity:.6} }
+    @keyframes cfall3 { 0%{transform:translate(0,0) rotate(0deg);opacity:1}  100%{transform:translate(-6px,120px) rotate(135deg);opacity:.75} }
+    @keyframes cfall4 { 0%{transform:translate(0,0) rotate(0deg);opacity:1}  100%{transform:translate(28px,80px)  rotate(-240deg);opacity:.5} }
+    @keyframes cfall5 { 0%{transform:translate(0,0) rotate(0deg);opacity:1}  100%{transform:translate(-22px,70px) rotate(160deg);opacity:.8} }
+    @keyframes cfall6 { 0%{transform:translate(0,0) rotate(0deg);opacity:1}  100%{transform:translate(12px,100px) rotate(-120deg);opacity:.65} }
+
+    .habit-scroll::-webkit-scrollbar { display: none; }
+    .habit-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const HABITS = [
+      { id: 1, icon: '🏃', name: 'Morning Run',   streak: 14, iconBg: '#D1FAE5' },
+      { id: 2, icon: '💧', name: 'Drink Water',   streak: 9,  iconBg: '#D1FAE5' },
+      { id: 3, icon: '📚', name: 'Read 20 pages', streak: 4,  iconBg: '#D1FAE5' },
+      { id: 4, icon: '🧘', name: 'Meditate',      streak: 1,  iconBg: '#D1FAE5' },
+    ];
+
+    /* Confetti data — shown over the orange header zone */
+    const CONFETTI = [
+      { color:'#FFFFFF', top:6,  left:8,  w:8,  h:5,  dur:1.0, dl:0,    shape:'rect', anim:'cfall1' },
+      { color:'#FFD700', top:3,  left:22, w:7,  h:7,  dur:1.2, dl:0.06, shape:'circ', anim:'cfall2' },
+      { color:'#FFF3CD', top:10, left:45, w:6,  h:9,  dur:0.9, dl:0.04, shape:'rect', anim:'cfall3' },
+      { color:'#FFFFFF', top:5,  left:62, w:9,  h:5,  dur:1.3, dl:0.1,  shape:'rect', anim:'cfall4' },
+      { color:'#FFD700', top:8,  left:80, w:6,  h:6,  dur:1.1, dl:0.07, shape:'circ', anim:'cfall5' },
+      { color:'#FFF3CD', top:2,  left:90, w:7,  h:4,  dur:1.0, dl:0.15, shape:'rect', anim:'cfall6' },
+      { color:'#FFFFFF', top:14, left:33, w:5,  h:8,  dur:1.15,dl:0.18, shape:'rect', anim:'cfall2' },
+      { color:'#FFD700', top:7,  left:55, w:8,  h:8,  dur:1.25,dl:0.08, shape:'circ', anim:'cfall1' },
+      { color:'#FFF3CD', top:17, left:74, w:6,  h:5,  dur:1.05,dl:0.12, shape:'rect', anim:'cfall3' },
+      { color:'#FFFFFF', top:11, left:5,  w:9,  h:4,  dur:1.2, dl:0.2,  shape:'rect', anim:'cfall5' },
+      { color:'#FFD700', top:19, left:40, w:5,  h:5,  dur:0.95,dl:0.03, shape:'circ', anim:'cfall4' },
+      { color:'#FFF3CD', top:4,  left:95, w:7,  h:5,  dur:1.1, dl:0.14, shape:'rect', anim:'cfall6' },
+      { color:'#FFFFFF', top:21, left:18, w:8,  h:6,  dur:1.3, dl:0.09, shape:'rect', anim:'cfall2' },
+      { color:'#FFD700', top:15, left:68, w:6,  h:6,  dur:1.0, dl:0.17, shape:'circ', anim:'cfall1' },
+      { color:'#FFF3CD', top:24, left:52, w:5,  h:9,  dur:0.9, dl:0.22, shape:'rect', anim:'cfall3' },
+      { color:'#FFFFFF', top:9,  left:38, w:7,  h:4,  dur:1.15,dl:0.11, shape:'rect', anim:'cfall5' },
+      { color:'#FFD700', top:13, left:85, w:6,  h:7,  dur:1.2, dl:0.05, shape:'circ', anim:'cfall4' },
+      { color:'#FFF3CD', top:20, left:27, w:8,  h:5,  dur:1.05,dl:0.19, shape:'rect', anim:'cfall6' },
+    ];
+
+    /* ── Nav icons ─────────────────────────────────────────────── */
+    function NavFlame({ active }) {
+      const c = active ? '#FF740D' : '#BDBDBD';
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2c0 6-6 8-6 14a6 6 0 0 0 12 0c0-6-6-8-6-14z"
+            fill={active ? '#FF740D' : 'none'} stroke={c}
+            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          {active && <path d="M12 11c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z" fill="white" opacity="0.4"/>}
+        </svg>
+      );
+    }
+    function NavBar({ color }) {
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3"  y="3"  width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3"  width="7" height="7" rx="1.5"/>
+          <rect x="3"  y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      );
+    }
+    function NavGear({ color }) {
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      );
+    }
+
+    /* ── Confetti overlay ──────────────────────────────────────── */
+    function ConfettiOverlay({ heightPct }) {
+      return (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0,
+          height: `${heightPct}%`,
+          pointerEvents: 'none', zIndex: 30, overflow: 'hidden',
+        }}>
+          {CONFETTI.map((c, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              top: `${c.top}%`, left: `${c.left}%`,
+              width: c.w, height: c.h,
+              background: c.color,
+              borderRadius: c.shape === 'circ' ? '50%' : 2,
+              opacity: 0.9,
+              animation: `${c.anim} ${c.dur}s ease-out ${c.dl}s both`,
+              animationPlayState: 'paused',
+            }} />
+          ))}
+        </div>
+      );
+    }
+
+    /* ── Completed habit card ──────────────────────────────────── */
+    function HabitCard({ habit, animDelay }) {
+      return (
+        <div style={{
+          borderRadius: 16,
+          background: '#F0FFF4',
+          border: '1.5px solid #BBF7D0',
+          borderLeft: '4px solid #22C55E',
+          padding: '12px 12px 12px 12px',
+          display: 'flex', alignItems: 'center', gap: 12,
+          opacity: 0.75,
+          animation: `cardFadeUp 0.36s ease ${animDelay}ms both`,
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: habit.iconBg, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 21,
+          }}>{habit.icon}</div>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{
+              fontSize: 15, fontWeight: 700, color: '#1A1A1A',
+              lineHeight: 1.25,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{habit.name}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3 }}>
+              <span style={{ fontSize: 13, lineHeight: 1 }}>🔥</span>
+              <span style={{ fontSize: 12.5, fontWeight: 500, color: '#FF740D' }}>
+                {habit.streak} day streak
+              </span>
+            </div>
+          </div>
+
+          {/* Green filled ring */}
+          <div style={{
+            width: 28, height: 28, borderRadius: 14, flexShrink: 0,
+            background: '#22C55E',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: `ringBurst 0.4s cubic-bezier(0.22,1,0.36,1) ${animDelay + 60}ms both`,
+          }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Home screen ───────────────────────────────────────────── */
+    function HomeScreen() {
+      const [mounted, setMounted] = useState(false);
+      useEffect(() => {
+        const t = setTimeout(() => setMounted(true), 60);
+        return () => clearTimeout(t);
+      }, []);
+
+      const anim = (d) => ({
+        opacity:   mounted ? 1 : 0,
+        transform: mounted ? 'translateY(0)' : 'translateY(10px)',
+        transition: `opacity 0.42s ease ${d}ms, transform 0.42s ease ${d}ms`,
+      });
+
+      return (
+        <div style={{
+          width: '100%', height: '100%',
+          background: '#FFFFFF',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+          position: 'relative',
+          fontFamily: 'DM Sans, sans-serif',
+        }}>
+
+          {/* ── Orange gradient header zone ──── */}
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0,
+            height: '35%',
+            background: 'linear-gradient(160deg, #FF5C00 0%, #FF9547 100%)',
+            zIndex: 0,
+          }} />
+
+          {/* ── Confetti over header ────────── */}
+          <ConfettiOverlay heightPct={38} />
+
+          {/* ── Scrollable content ──────────── */}
+          <div className="habit-scroll" style={{
+            position: 'relative', zIndex: 1,
+            flex: 1, overflowY: 'auto',
+            paddingTop: 54,
+            paddingBottom: 96,
+          }}>
+
+            {/* Header */}
+            <div style={{
+              padding: '18px 20px 20px',
+              display: 'flex', alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              animation: mounted ? 'headerSlideDown 0.5s ease 0.05s both' : 'none',
+            }}>
+              <div>
+                <h1 style={{
+                  fontFamily: 'DM Serif Display, serif',
+                  fontSize: 26, fontWeight: 400,
+                  color: '#FFFFFF', lineHeight: 1.2,
+                  textShadow: '0 1px 8px rgba(0,0,0,0.15)',
+                }}>You crushed it! 🔥</h1>
+                <p style={{
+                  fontSize: 14, fontWeight: 500,
+                  color: 'rgba(255,255,255,0.88)',
+                  marginTop: 5, lineHeight: 1.3,
+                }}>All habits done for today</p>
+              </div>
+              {/* Avatar */}
+              <div style={{
+                width: 42, height: 42, borderRadius: 21, flexShrink: 0,
+                background: 'rgba(255,255,255,0.25)',
+                border: '1.5px solid rgba(255,255,255,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#FFFFFF' }}>A</span>
+              </div>
+            </div>
+
+            {/* Progress card — floats over header/body boundary */}
+            <div style={{
+              margin: '0 20px',
+              background: '#FFFFFF',
+              borderRadius: 16,
+              border: '1.5px solid #F0EDE8',
+              padding: '13px 16px',
+              ...anim(120),
+            }}>
+              <div style={{
+                display: 'flex', justifyContent: 'space-between',
+                alignItems: 'baseline', marginBottom: 9,
+              }}>
+                <p style={{ fontSize: 14.5, fontWeight: 600, color: '#1A1A1A' }}>
+                  4 of 4 — All done!
+                </p>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: '#22C55E' }}>
+                  🎉 Perfect day
+                </span>
+              </div>
+              {/* Full orange bar + check end cap */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{
+                  flex: 1, height: 4, borderRadius: 99,
+                  background: '#F0EDE8', overflow: 'hidden',
+                }}>
+                  <div style={{
+                    height: '100%', borderRadius: 99, background: '#FF740D',
+                    animation: 'barFill 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.25s both',
+                  }} />
+                </div>
+                <div style={{
+                  width: 16, height: 16, borderRadius: 8,
+                  background: '#FF740D', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
+                    stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Habit cards */}
+            <div style={{
+              padding: '14px 20px 0',
+              display: 'flex', flexDirection: 'column', gap: 12,
+              ...anim(180),
+            }}>
+              {HABITS.map((h, i) => (
+                <HabitCard key={h.id} habit={h} animDelay={200 + i * 60} />
+              ))}
+            </div>
+
+            {/* ── Celebration banner ──────────── */}
+            <div style={{
+              margin: '16px 20px 0',
+              borderRadius: 20,
+              background: 'linear-gradient(135deg, #FF5C00 0%, #FF9A3C 100%)',
+              padding: '22px 20px',
+              ...anim(420),
+            }}>
+              {/* Star ring decoration */}
+              <div style={{
+                width: 52, height: 52, borderRadius: 26,
+                background: 'rgba(255,255,255,0.18)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: 12,
+                fontSize: 26,
+              }}>🔥</div>
+
+              <p style={{
+                fontFamily: 'DM Serif Display, serif',
+                fontSize: 22, fontWeight: 400,
+                color: '#FFFFFF', lineHeight: 1.2,
+                marginBottom: 6,
+              }}>Perfect Day!</p>
+
+              <p style={{
+                fontSize: 13.5, fontWeight: 400,
+                color: 'rgba(255,255,255,0.85)',
+                lineHeight: 1.45,
+              }}>Come back tomorrow to keep your streaks alive.</p>
+
+              {/* Streak pill row */}
+              <div style={{
+                display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap',
+              }}>
+                {HABITS.map(h => (
+                  <div key={h.id} style={{
+                    background: 'rgba(255,255,255,0.18)',
+                    borderRadius: 20, padding: '4px 10px',
+                    display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                    <span style={{ fontSize: 12 }}>{h.icon}</span>
+                    <span style={{
+                      fontSize: 11.5, fontWeight: 600, color: '#FFFFFF',
+                    }}>{h.streak}d</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>{/* end scrollable */}
+
+          {/* ── Bottom nav ─────────────────────── */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            height: 82, zIndex: 10,
+            background: '#FFFFFF',
+            borderTop: '1px solid #F0EDE8',
+            display: 'flex', alignItems: 'flex-start',
+            justifyContent: 'space-around',
+            paddingTop: 12,
+          }}>
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              <NavFlame active={true} />
+              <span style={{ fontSize: 10.5, fontWeight: 600, color: '#FF740D' }}>Home</span>
+            </button>
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              <NavBar color="#BDBDBD" />
+              <span style={{ fontSize: 10.5, fontWeight: 400, color: '#BDBDBD' }}>Stats</span>
+            </button>
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              <NavGear color="#BDBDBD" />
+              <span style={{ fontSize: 10.5, fontWeight: 400, color: '#BDBDBD' }}>Settings</span>
+            </button>
+          </div>
+
+          {/* ── FAB ──────────────────────────── */}
+          <button style={{
+            position: 'absolute', bottom: 96, right: 20,
+            width: 56, height: 56, borderRadius: 28,
+            background: '#FF740D',
+            border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'fabPop 0.45s cubic-bezier(0.34,1.56,0.64,1) 0.4s both',
+            zIndex: 20,
+          }}
+          onMouseDown={e => e.currentTarget.style.transform = 'scale(0.92)'}
+          onMouseUp={e   => e.currentTarget.style.transform = 'scale(1)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="white" strokeWidth="2.6" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+          </button>
+
+        </div>
+      );
+    }
+
+    /* ── Root ──────────────────────────────────────────────────── */
+    function App() {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          minHeight: '100vh', width: '100%',
+          background: '#D8D4CF',
+        }}>
+          <IOSDevice width={390} height={844} dark={false}>
+            <HomeScreen />
+          </IOSDevice>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

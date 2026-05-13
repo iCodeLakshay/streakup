@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreakUp — 2.13 Home + Add Habit Sheet</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #D8D4CF;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Sans', sans-serif;
+    }
+    @keyframes sheetUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; } 50% { opacity: 0; }
+    }
+    .habit-scroll::-webkit-scrollbar { display: none; }
+    .habit-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    /* ─────────────────────────────────────────────────────────────
+       Keyboard — simplified iOS layout
+    ───────────────────────────────────────────────────────────── */
+    const KB_ROWS = [
+      ['Q','W','E','R','T','Y','U','I','O','P'],
+      ['A','S','D','F','G','H','J','K','L'],
+      ['⇧','Z','X','C','V','B','N','M','⌫'],
+      ['123','','space','','return'],
+    ];
+
+    function IOSKeyboard() {
+      const keyBase = {
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#FFFFFF',
+        borderRadius: 5,
+        boxShadow: '0 1px 0 rgba(0,0,0,0.35)',
+        fontSize: 16, fontWeight: 400, color: '#000000',
+        fontFamily: 'DM Sans, sans-serif',
+        cursor: 'default', userSelect: 'none',
+        flexShrink: 0,
+      };
+      const specialKey = { ...keyBase, background: '#ADB5BD', fontSize: 13 };
+
+      return (
+        <div style={{
+          width: '100%', height: '100%',
+          background: '#D1D3DA',
+          display: 'flex', flexDirection: 'column',
+          padding: '10px 4px 6px',
+          gap: 10,
+        }}>
+          {/* Row 1 — QWERTYUIOP */}
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+            {KB_ROWS[0].map(k => (
+              <div key={k} style={{ ...keyBase, width: 32, height: 42, fontSize: 15 }}>{k}</div>
+            ))}
+          </div>
+
+          {/* Row 2 — ASDFGHJKL */}
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+            {KB_ROWS[1].map(k => (
+              <div key={k} style={{ ...keyBase, width: 32, height: 42, fontSize: 15 }}>{k}</div>
+            ))}
+          </div>
+
+          {/* Row 3 — ⇧ ZXCVBNM ⌫ */}
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center' }}>
+            <div style={{ ...specialKey, width: 42, height: 42, fontSize: 18 }}>⇧</div>
+            {['Z','X','C','V','B','N','M'].map(k => (
+              <div key={k} style={{ ...keyBase, width: 32, height: 42, fontSize: 15 }}>{k}</div>
+            ))}
+            <div style={{ ...specialKey, width: 42, height: 42, fontSize: 18 }}>⌫</div>
+          </div>
+
+          {/* Row 4 — 123 / space / return */}
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+            <div style={{ ...specialKey, width: 44, height: 42, fontSize: 13 }}>123</div>
+            <div style={{ ...specialKey, width: 16, height: 42, fontSize: 13, background: '#ADB5BD' }}></div>
+            <div style={{ ...keyBase, flex: 1, maxWidth: 186, height: 42, fontSize: 15 }}>space</div>
+            <div style={{ ...specialKey, width: 16, height: 42, background: '#ADB5BD' }}></div>
+            <div style={{ ...specialKey, width: 90, height: 42, fontSize: 14 }}>return</div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Color swatches
+    ───────────────────────────────────────────────────────────── */
+    const SWATCHES = [
+      '#FF740D','#FF3B30','#FF9500','#34C759',
+      '#007AFF','#5856D6','#FF2D55','#8E8E93',
+    ];
+
+    function ColorSwatches({ selected, onSelect }) {
+      return (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {SWATCHES.map(c => (
+            <div key={c} onClick={() => onSelect(c)} style={{
+              width: 32, height: 32, borderRadius: 16,
+              background: c, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              outline: selected === c ? `3px solid ${c}` : 'none',
+              outlineOffset: 2,
+              boxShadow: selected === c ? '0 0 0 2px white' : 'none',
+            }}>
+              {selected === c && (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Background home screen (2.8 partial state, simplified)
+    ───────────────────────────────────────────────────────────── */
+    function HomeBackground() {
+      return (
+        <div style={{
+          width: '100%', height: '100%',
+          background: '#FFFFFF',
+          paddingTop: 54,
+          fontFamily: 'DM Sans, sans-serif',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          {/* Header */}
+          <div style={{ padding: '14px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <p style={{ fontSize: 12.5, color: '#BDBDBD', marginBottom: 2 }}>Monday, May 12</p>
+              <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: 22, color: '#1A1A1A' }}>Good morning 👋</h2>
+            </div>
+            <div style={{ width: 42, height: 42, borderRadius: 21, background: '#FF740D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: '#FFF' }}>A</span>
+            </div>
+          </div>
+
+          {/* Progress card */}
+          <div style={{ margin: '14px 20px 0', background: '#FFF8F0', borderRadius: 16, border: '1.5px solid rgba(255,116,13,0.13)', padding: '13px 16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 9 }}>
+              <p style={{ fontSize: 14.5, fontWeight: 600, color: '#1A1A1A' }}>2 of 4 done today</p>
+              <span style={{ fontSize: 12.5, color: '#FF740D', fontWeight: 500 }}>Keep going</span>
+            </div>
+            <div style={{ height: 4, borderRadius: 99, background: '#F0EDE8', overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: 99, background: '#FF740D', width: '50%' }} />
+            </div>
+          </div>
+
+          {/* Habit cards (simplified) */}
+          <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 11 }}>
+            {[
+              { icon: '📚', name: 'Read 20 pages', streak: 3, done: false },
+              { icon: '🧘', name: 'Meditate',      streak: 0, done: false },
+            ].map((h, i) => (
+              <div key={i} style={{
+                borderRadius: 14, background: '#FFFFFF', border: '1.5px solid #F0EDE8',
+                padding: '11px 12px', display: 'flex', alignItems: 'center', gap: 11,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+              }}>
+                <div style={{ width: 40, height: 40, borderRadius: 11, background: i===0?'#FFF5E8':'#F5F5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19 }}>{h.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: i===1?'#888':'#1A1A1A' }}>{h.name}</p>
+                  <p style={{ fontSize: 12, color: i===1?'#BDBDBD':'#FF740D', fontWeight: 500, marginTop: 2 }}>{i===1?'Start your streak!':'🔥 '+h.streak+' day streak'}</p>
+                </div>
+                <div style={{ width: 22, height: 22, borderRadius: 11, border: `2.5px solid ${i===1?'#BDBDBD':'#FF740D'}` }} />
+              </div>
+            ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1, height: 1, background: '#F0EDE8' }} />
+              <span style={{ fontSize: 11, color: '#C5BFB8' }}>Completed today ✓</span>
+              <div style={{ flex: 1, height: 1, background: '#F0EDE8' }} />
+            </div>
+            {[
+              { icon: '🏃', name: 'Morning Run', streak: 13 },
+              { icon: '💧', name: 'Drink Water', streak: 8 },
+            ].map((h, i) => (
+              <div key={i} style={{
+                borderRadius: 14, background: '#F0FFF4', border: '1.5px solid #BBF7D0',
+                borderLeft: '4px solid #22C55E',
+                padding: '11px 12px', display: 'flex', alignItems: 'center', gap: 11, opacity: 0.7,
+              }}>
+                <div style={{ width: 40, height: 40, borderRadius: 11, background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19 }}>{h.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: '#1A1A1A' }}>{h.name}</p>
+                  <p style={{ fontSize: 12, color: '#FF740D', fontWeight: 500, marginTop: 2 }}>🔥 {h.streak} day streak</p>
+                </div>
+                <div style={{ width: 24, height: 24, borderRadius: 12, background: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Add Habit bottom sheet
+    ───────────────────────────────────────────────────────────── */
+    function AddHabitSheet({ habitName, onNameChange, selectedColor, onColorSelect }) {
+      const hasName = habitName.trim().length > 0;
+      return (
+        <div style={{
+          width: '100%', height: '100%',
+          background: '#FFFFFF',
+          borderRadius: '24px 24px 0 0',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+          {/* Drag handle */}
+          <div style={{
+            display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 4, flexShrink: 0,
+          }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: '#E0DDD9' }} />
+          </div>
+
+          {/* Header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 20px 14px', flexShrink: 0,
+          }}>
+            <h2 style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 20, fontWeight: 700, color: '#1A1A1A' }}>
+              New Habit
+            </h2>
+            <div style={{
+              width: 30, height: 30, borderRadius: 15,
+              background: '#F0EDE8',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="#888" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </div>
+          </div>
+
+          {/* Form body — scrollable */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
+
+            {/* Emoji + name row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              {/* Emoji picker button */}
+              <div style={{
+                width: 52, height: 52, borderRadius: 26, flexShrink: 0,
+                background: '#FFF0E0',
+                border: `2.5px solid #FF740D`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 24, cursor: 'pointer',
+              }}>🏃</div>
+
+              {/* Name input */}
+              <div style={{
+                flex: 1,
+                background: '#F8F6F3',
+                borderRadius: 12,
+                border: '1.5px solid #F0EDE8',
+                padding: '12px 14px',
+                display: 'flex', alignItems: 'center',
+                position: 'relative',
+              }}>
+                {habitName ? (
+                  <span style={{
+                    fontSize: 15, fontWeight: 500, color: '#1A1A1A',
+                    fontFamily: 'DM Sans, sans-serif',
+                  }}>
+                    {habitName}
+                    <span style={{
+                      display: 'inline-block', width: 2, height: 16,
+                      background: '#FF740D', marginLeft: 1, verticalAlign: 'text-bottom',
+                      animation: 'blink 1s step-end infinite',
+                    }} />
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 15, color: '#BDBDBD', fontFamily: 'DM Sans, sans-serif' }}>
+                    Habit name
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Note input */}
+            <div style={{
+              background: '#F8F6F3',
+              borderRadius: 12,
+              border: '1.5px solid #F0EDE8',
+              padding: '12px 14px',
+              marginBottom: 20,
+              minHeight: 60,
+            }}>
+              <span style={{ fontSize: 14, color: '#C5BFB8', fontFamily: 'DM Sans, sans-serif' }}>
+                Add a note (optional)
+              </span>
+            </div>
+
+            {/* Color swatches */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{
+                fontSize: 11.5, fontWeight: 600, color: '#C5BFB8',
+                letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 12,
+              }}>Colour</p>
+              <ColorSwatches selected={selectedColor} onSelect={onColorSelect} />
+            </div>
+
+          </div>
+
+          {/* Add Habit button */}
+          <div style={{ padding: '12px 20px 16px', flexShrink: 0 }}>
+            <div style={{
+              borderRadius: 14,
+              background: hasName
+                ? 'linear-gradient(135deg, #FF5C00 0%, #FF9547 100%)'
+                : '#E0DDD9',
+              padding: '15px',
+              textAlign: 'center',
+              cursor: hasName ? 'pointer' : 'default',
+            }}>
+              <span style={{
+                fontSize: 16, fontWeight: 700,
+                color: hasName ? '#FFFFFF' : '#A89F95',
+                fontFamily: 'DM Sans, sans-serif',
+              }}>Add Habit</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Main scene
+    ───────────────────────────────────────────────────────────── */
+    function Scene() {
+      const [habitName,    setHabitName]    = useState('Morning Run');
+      const [selectedColor, setSelectedColor] = useState('#FF740D');
+
+      const KEYBOARD_H = 262;
+      const SHEET_H    = Math.round(844 * 0.65); // 548px
+      const sheetBottom = KEYBOARD_H;
+
+      return (
+        <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+
+          {/* ── Blurred background home screen ── */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            filter: 'blur(3px)',
+            transform: 'scale(1.02)', // prevent blur edge artifacts
+          }}>
+            <HomeBackground />
+          </div>
+
+          {/* ── Dark scrim ── */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'rgba(0,0,0,0.42)',
+          }} />
+
+          {/* ── Bottom sheet ── */}
+          <div style={{
+            position: 'absolute',
+            left: 0, right: 0,
+            bottom: sheetBottom,
+            height: SHEET_H,
+            animation: 'sheetUp 0.38s cubic-bezier(0.22,1,0.36,1) both',
+          }}>
+            <AddHabitSheet
+              habitName={habitName}
+              onNameChange={setHabitName}
+              selectedColor={selectedColor}
+              onColorSelect={setSelectedColor}
+            />
+          </div>
+
+          {/* ── iOS Keyboard ── */}
+          <div style={{
+            position: 'absolute',
+            left: 0, right: 0, bottom: 0,
+            height: KEYBOARD_H,
+          }}>
+            <IOSKeyboard />
+          </div>
+
+        </div>
+      );
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       Root
+    ───────────────────────────────────────────────────────────── */
+    function App() {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          minHeight: '100vh', width: '100%', background: '#D8D4CF',
+        }}>
+          <IOSDevice width={390} height={844} dark={false}>
+            <Scene />
+          </IOSDevice>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

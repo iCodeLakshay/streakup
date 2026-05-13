@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreakUp — 2.2 Home: 1 Habit Incomplete (Light)</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #D8D4CF;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* ── Keyframes ────────────────────────────────── */
+    @keyframes fabPop {
+      0%   { transform: scale(0.7); opacity: 0; }
+      70%  { transform: scale(1.08); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Outer dashed pulse — the onboarding hint ring */
+    @keyframes pulseDash {
+      0%   { transform: scale(1);    opacity: 0.55; }
+      50%  { transform: scale(1.22); opacity: 0.18; }
+      100% { transform: scale(1);    opacity: 0.55; }
+    }
+
+    /* Subtle swipe arrow drift */
+    @keyframes swipeDrift {
+      0%, 100% { opacity: 0.38; transform: translateX(0); }
+      50%       { opacity: 0.65; transform: translateX(5px); }
+    }
+
+    /* Card slide-in on mount */
+    @keyframes cardSlide {
+      from { opacity: 0; transform: translateX(-14px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Tap-complete pop */
+    @keyframes ringPop {
+      0%   { transform: scale(1); }
+      35%  { transform: scale(0.82); }
+      70%  { transform: scale(1.18); }
+      100% { transform: scale(1); }
+    }
+
+    /* Staggered fade-up for header / card sections */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    /* ─────────────────────────────────────────────────
+       Nav icons — shared with design system
+    ───────────────────────────────────────────────── */
+    function NavFlame({ active }) {
+      const c = active ? '#FF740D' : '#BDBDBD';
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M12 2c0 6-6 8-6 14a6 6 0 0 0 12 0c0-6-6-8-6-14z"
+            fill={active ? '#FF740D' : 'none'}
+            stroke={c} strokeWidth="1.8"
+            strokeLinecap="round" strokeLinejoin="round"
+          />
+          {active && (
+            <path
+              d="M12 11c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z"
+              fill="white" opacity="0.4"
+            />
+          )}
+        </svg>
+      );
+    }
+
+    function NavBar({ color }) {
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke={color} strokeWidth="1.8"
+          strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3"  y="3"  width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3"  width="7" height="7" rx="1.5"/>
+          <rect x="3"  y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      );
+    }
+
+    function NavGear({ color }) {
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke={color} strokeWidth="1.8"
+          strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      );
+    }
+
+    /* ─────────────────────────────────────────────────
+       Completion ring — the primary tap target
+       Spec: 24px ring diameter, 2.5px stroke, orange.
+       Outer dashed pulse ring guides new users.
+    ───────────────────────────────────────────────── */
+    function CompletionRing({ done, onToggle }) {
+      const [popping, setPopping] = useState(false);
+
+      const handleTap = () => {
+        if (popping) return;
+        setPopping(true);
+        setTimeout(() => setPopping(false), 420);
+        onToggle();
+      };
+
+      return (
+        /* Hit area — 44×44 for comfortable tapping */
+        <div
+          onClick={handleTap}
+          style={{
+            position: 'relative',
+            width: 44, height: 44,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+            cursor: 'pointer',
+          }}
+        >
+          {/* ── Onboarding pulse hint (dashed outer ring) ── */}
+          {!done && (
+            <div style={{
+              position: 'absolute',
+              width: 38, height: 38,
+              borderRadius: '50%',
+              border: '2px dashed rgba(255,116,13,0.45)',
+              animation: 'pulseDash 2.4s ease-in-out infinite',
+              pointerEvents: 'none',
+            }} />
+          )}
+
+          {/* ── Main 24px ring ── */}
+          <div style={{
+            width: 24, height: 24,
+            borderRadius: '50%',
+            border: done ? 'none' : '2.5px solid #FF740D',
+            background: done ? '#FF740D' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.22s ease, border-color 0.22s ease',
+            animation: popping ? 'ringPop 0.42s ease' : 'none',
+          }}>
+            {done && (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    /* ─────────────────────────────────────────────────
+       Habit card
+    ───────────────────────────────────────────────── */
+    function HabitCard({ done, onComplete }) {
+      const touchStartX = useRef(null);
+      const [swipeX, setSwipeX]     = useState(0);
+      const [dragging, setDragging] = useState(false);
+
+      const onTouchStart = (e) => {
+        touchStartX.current = e.touches[0].clientX;
+        setDragging(true);
+      };
+      const onTouchMove = (e) => {
+        if (touchStartX.current === null) return;
+        const dx = e.touches[0].clientX - touchStartX.current;
+        setSwipeX(Math.max(0, Math.min(dx, 80)));
+      };
+      const onTouchEnd = () => {
+        if (swipeX > 52) onComplete();
+        setSwipeX(0);
+        setDragging(false);
+        touchStartX.current = null;
+      };
+
+      return (
+        <div style={{
+          position: 'relative',
+          borderRadius: 16,
+          overflow: 'hidden',
+          animation: 'cardSlide 0.38s cubic-bezier(0.22,1,0.36,1) 0.22s both',
+        }}>
+
+          {/* Swipe-reveal green bg */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            borderRadius: 16,
+            background: 'linear-gradient(90deg, #4CAF50 0%, #43A047 100%)',
+            display: 'flex', alignItems: 'center',
+            paddingLeft: 20,
+          }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+              stroke="white" strokeWidth="2.8"
+              strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+
+          {/* Card surface */}
+          <div
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            style={{
+              position: 'relative', zIndex: 1,
+              background: '#FFFFFF',
+              borderRadius: 16,
+              border: '1.5px solid #F0EDE8',
+              padding: '14px 14px 12px 14px',
+              display: 'flex', alignItems: 'center', gap: 12,
+              boxShadow: '0 2px 14px rgba(0,0,0,0.07)',
+              transform: `translateX(${swipeX}px)`,
+              transition: dragging ? 'none' : 'transform 0.28s cubic-bezier(0.22,1,0.36,1)',
+            }}
+          >
+            {/* Emoji icon badge */}
+            <div style={{
+              width: 46, height: 46,
+              borderRadius: 13,
+              background: '#FFF0E0',
+              flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 22,
+              userSelect: 'none',
+            }}>
+              🏃
+            </div>
+
+            {/* Text block */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{
+                fontSize: 15.5, fontWeight: 700,
+                color: '#1A1A1A',
+                fontFamily: 'DM Sans, sans-serif',
+                lineHeight: 1.25,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                Morning Run
+              </p>
+
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 3,
+                marginTop: 3,
+              }}>
+                <span style={{ fontSize: 13, lineHeight: 1 }}>🔥</span>
+                <span style={{
+                  fontSize: 12.5, fontWeight: 500,
+                  color: '#FF740D',
+                  fontFamily: 'DM Sans, sans-serif',
+                }}>3 day streak</span>
+              </div>
+
+              {/* Swipe hint */}
+              {!done && (
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 3,
+                  marginTop: 5,
+                  animation: 'swipeDrift 2.8s ease-in-out infinite',
+                }}>
+                  <span style={{
+                    fontSize: 11, fontWeight: 400,
+                    color: '#C5BFB8',
+                    fontFamily: 'DM Sans, sans-serif',
+                    letterSpacing: 0.1,
+                  }}>swipe</span>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                    stroke="#C5BFB8" strokeWidth="2.2"
+                    strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M13 6l6 6-6 6"/>
+                  </svg>
+                </div>
+              )}
+            </div>
+
+            {/* Completion ring */}
+            <CompletionRing done={done} onToggle={onComplete} />
+          </div>
+        </div>
+      );
+    }
+
+    /* ─────────────────────────────────────────────────
+       Home screen
+    ───────────────────────────────────────────────── */
+    function HomeScreen() {
+      const [mounted, setMounted] = useState(false);
+      const [done, setDone]       = useState(false);
+
+      useEffect(() => {
+        const t = setTimeout(() => setMounted(true), 60);
+        return () => clearTimeout(t);
+      }, []);
+
+      /* Staggered fade-up helper */
+      const anim = (delayMs) => ({
+        opacity:   mounted ? 1 : 0,
+        transform: mounted ? 'translateY(0)' : 'translateY(10px)',
+        transition: `opacity 0.42s ease ${delayMs}ms, transform 0.42s ease ${delayMs}ms`,
+      });
+
+      const completed = done ? 1 : 0;
+      const total     = 1;
+      const pct       = (completed / total) * 100; // 0 or 100
+
+      return (
+        <div style={{
+          width: '100%', height: '100%',
+          background: '#FFFFFF',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+          paddingTop: 54,
+          position: 'relative',
+          fontFamily: 'DM Sans, sans-serif',
+        }}>
+
+          {/* ── Header ─────────────────────────────── */}
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 20px 0',
+            ...anim(0),
+          }}>
+            <div>
+              <p style={{
+                fontSize: 12.5, fontWeight: 500,
+                color: '#BDBDBD',
+                marginBottom: 2,
+                letterSpacing: 0.1,
+              }}>Monday, May 12</p>
+              <h2 style={{
+                fontFamily: 'DM Serif Display, serif',
+                fontSize: 22, fontWeight: 400,
+                color: '#1A1A1A', lineHeight: 1.2,
+              }}>Good morning 👋</h2>
+            </div>
+
+            {/* Avatar */}
+            <div style={{
+              width: 42, height: 42, borderRadius: 21,
+              background: '#FF740D',
+              flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{
+                fontSize: 16, fontWeight: 700,
+                color: '#FFFFFF',
+              }}>A</span>
+            </div>
+          </div>
+
+          {/* ── Progress summary card ───────────────── */}
+          <div style={{
+            margin: '16px 20px 0',
+            background: '#FFF8F0',
+            borderRadius: 16,
+            border: '1.5px solid rgba(255,116,13,0.13)',
+            padding: '13px 16px',
+            boxShadow: '0 1px 6px rgba(255,116,13,0.07)',
+            ...anim(90),
+          }}>
+            <div style={{
+              display: 'flex', justifyContent: 'space-between',
+              alignItems: 'baseline',
+              marginBottom: 10,
+            }}>
+              <p style={{
+                fontSize: 14.5, fontWeight: 600, color: '#1A1A1A',
+              }}>
+                {completed} of {total} done today
+              </p>
+              <span style={{
+                fontSize: 12.5, fontWeight: 500,
+                color: done ? '#4CAF50' : '#FF740D',
+                transition: 'color 0.3s',
+              }}>
+                {done ? 'All done! 🎉' : 'Keep going'}
+              </span>
+            </div>
+
+            {/* Thin progress bar */}
+            <div style={{
+              height: 4, borderRadius: 99,
+              background: '#F0EDE8',
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                height: '100%', borderRadius: 99,
+                background: '#FF740D',
+                width: `${pct}%`,
+                transition: 'width 0.55s cubic-bezier(0.34,1.56,0.64,1)',
+                minWidth: pct > 0 ? 6 : 0,
+              }} />
+            </div>
+          </div>
+
+          {/* ── Section label ───────────────────────── */}
+          <div style={{
+            padding: '20px 20px 10px',
+            ...anim(160),
+          }}>
+            <p style={{
+              fontSize: 10.5, fontWeight: 600,
+              color: '#C5BFB8',
+              letterSpacing: 0.9,
+              textTransform: 'uppercase',
+            }}>Today</p>
+          </div>
+
+          {/* ── Habit card ──────────────────────────── */}
+          <div style={{
+            padding: '0 20px',
+            ...anim(210),
+          }}>
+            <HabitCard
+              done={done}
+              onComplete={() => setDone(d => !d)}
+            />
+          </div>
+
+          {/* Spacer */}
+          <div style={{ flex: 1 }} />
+
+          {/* ── Bottom nav ──────────────────────────── */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            height: 82,
+            background: '#FFFFFF',
+            borderTop: '1px solid #F0EDE8',
+            display: 'flex', alignItems: 'flex-start',
+            justifyContent: 'space-around',
+            paddingTop: 12,
+            zIndex: 10,
+          }}>
+            <button style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            }}>
+              <NavFlame active={true} />
+              <span style={{ fontSize: 10.5, fontWeight: 600, color: '#FF740D' }}>Home</span>
+            </button>
+
+            <button style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            }}>
+              <NavBar color="#BDBDBD" />
+              <span style={{ fontSize: 10.5, fontWeight: 400, color: '#BDBDBD' }}>Stats</span>
+            </button>
+
+            <button style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            }}>
+              <NavGear color="#BDBDBD" />
+              <span style={{ fontSize: 10.5, fontWeight: 400, color: '#BDBDBD' }}>Settings</span>
+            </button>
+          </div>
+
+          {/* ── FAB ─────────────────────────────────── */}
+          <button
+            style={{
+              position: 'absolute', bottom: 96, right: 20,
+              width: 56, height: 56, borderRadius: 28,
+              background: '#FF740D',
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 14px rgba(255,116,13,0.35)',
+              animation: 'fabPop 0.45s cubic-bezier(0.34,1.56,0.64,1) 0.3s both',
+              zIndex: 20,
+            }}
+            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.92)'}
+            onMouseUp={e   => e.currentTarget.style.transform = 'scale(1)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="white" strokeWidth="2.6" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+          </button>
+
+        </div>
+      );
+    }
+
+    /* ─────────────────────────────────────────────────
+       Root
+    ───────────────────────────────────────────────── */
+    function App() {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          minHeight: '100vh', width: '100%',
+          background: '#D8D4CF',
+        }}>
+          <IOSDevice width={390} height={844} dark={false}>
+            <HomeScreen />
+          </IOSDevice>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

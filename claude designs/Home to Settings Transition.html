@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreakUp — 2.15 Home → Settings Transition</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #D8D4CF;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .habit-scroll::-webkit-scrollbar { display: none; }
+    .habit-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+
+    /* ── Nav icons ─────────────────────────────────────────────── */
+    function NavFlame({ active }) {
+      const c = active ? '#FF740D' : '#BDBDBD';
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2c0 6-6 8-6 14a6 6 0 0 0 12 0c0-6-6-8-6-14z"
+            fill={active ? '#FF740D' : 'none'} stroke={c}
+            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          {active && <path d="M12 11c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z" fill="white" opacity="0.4"/>}
+        </svg>
+      );
+    }
+    function NavBar({ color }) {
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3"  y="3"  width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3"  width="7" height="7" rx="1.5"/>
+          <rect x="3"  y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      );
+    }
+    function NavGear({ active }) {
+      const c = active ? '#FF740D' : '#BDBDBD';
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      );
+    }
+
+    /* ── Shared bottom nav — Settings active ──────────────────── */
+    function TransitionNav() {
+      return (
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          height: 82, zIndex: 30,
+          background: '#FFFFFF',
+          borderTop: '1px solid #F0EDE8',
+          display: 'flex', alignItems: 'flex-start',
+          justifyContent: 'space-around',
+          paddingTop: 12,
+        }}>
+          {/* Home — now grey */}
+          <button style={{ background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+            <NavFlame active={false} />
+            <span style={{ fontSize: 10.5, fontWeight: 400, color: '#BDBDBD' }}>Home</span>
+          </button>
+          {/* Stats — grey */}
+          <button style={{ background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+            <NavBar color="#BDBDBD" />
+            <span style={{ fontSize: 10.5, fontWeight: 400, color: '#BDBDBD' }}>Stats</span>
+          </button>
+          {/* Settings — orange active */}
+          <button style={{ background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+            <NavGear active={true} />
+            <span style={{ fontSize: 10.5, fontWeight: 600, color: '#FF740D' }}>Settings</span>
+          </button>
+        </div>
+      );
+    }
+
+    /* ── Home screen (2.8 partial, no nav bar — shared nav used) ─ */
+    function HomeContent() {
+      return (
+        <div style={{
+          width: '100%', height: '100%',
+          background: '#FFFFFF',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden', paddingTop: 54,
+          fontFamily: 'DM Sans, sans-serif',
+          position: 'relative',
+        }}>
+          {/* Header */}
+          <div style={{ padding: '14px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+            <div>
+              <p style={{ fontSize: 12.5, fontWeight: 500, color: '#BDBDBD', marginBottom: 2 }}>Monday, May 12</p>
+              <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: 22, color: '#1A1A1A', lineHeight: 1.2 }}>Good morning 👋</h2>
+            </div>
+            <div style={{ width: 42, height: 42, borderRadius: 21, background: '#FF740D', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: '#FFF' }}>A</span>
+            </div>
+          </div>
+
+          {/* Progress card */}
+          <div style={{ margin: '14px 20px 0', background: '#FFF8F0', borderRadius: 16, border: '1.5px solid rgba(255,116,13,0.13)', padding: '13px 16px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 9 }}>
+              <p style={{ fontSize: 14.5, fontWeight: 600, color: '#1A1A1A' }}>2 of 4 done today</p>
+              <span style={{ fontSize: 12.5, fontWeight: 500, color: '#FF740D' }}>Keep going</span>
+            </div>
+            <div style={{ height: 4, borderRadius: 99, background: '#F0EDE8', overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: 99, background: '#FF740D', width: '50%' }} />
+            </div>
+          </div>
+
+          {/* Habit list */}
+          <div className="habit-scroll" style={{ flex: 1, overflowY: 'auto', paddingBottom: 96 }}>
+            <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 11 }}>
+              {/* Incomplete */}
+              {[{ icon: '📚', bg: '#FFF5E8', name: 'Read 20 pages', streak: '3 day streak', zero: false },
+                { icon: '🧘', bg: '#F5F5F5', name: 'Meditate', streak: 'Start your streak!', zero: true }
+              ].map((h, i) => (
+                <div key={i} style={{ borderRadius: 14, background: '#FFFFFF', border: '1.5px solid #F0EDE8', padding: '11px 12px', display: 'flex', alignItems: 'center', gap: 11, boxShadow: '0 2px 8px rgba(0,0,0,0.05)', opacity: h.zero ? 0.85 : 1 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 11, background: h.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19 }}>{h.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: h.zero ? '#888' : '#1A1A1A' }}>{h.name}</p>
+                    <p style={{ fontSize: 12, color: h.zero ? '#BDBDBD' : '#FF740D', fontWeight: 500, marginTop: 2 }}>{h.zero ? h.streak : '🔥 ' + h.streak}</p>
+                  </div>
+                  <div style={{ width: 22, height: 22, borderRadius: 11, border: `2.5px solid ${h.zero ? '#BDBDBD' : '#FF740D'}` }} />
+                </div>
+              ))}
+              {/* Divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ flex: 1, height: 1, background: '#F0EDE8' }} />
+                <span style={{ fontSize: 11, color: '#C5BFB8' }}>Completed today ✓</span>
+                <div style={{ flex: 1, height: 1, background: '#F0EDE8' }} />
+              </div>
+              {/* Completed */}
+              {[{ icon: '🏃', name: 'Morning Run', streak: 13 }, { icon: '💧', name: 'Drink Water', streak: 8 }].map((h, i) => (
+                <div key={i} style={{ borderRadius: 14, background: '#F0FFF4', border: '1.5px solid #BBF7D0', borderLeft: '4px solid #22C55E', padding: '11px 12px', display: 'flex', alignItems: 'center', gap: 11, opacity: 0.7 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 11, background: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19 }}>{h.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: '#1A1A1A' }}>{h.name}</p>
+                    <p style={{ fontSize: 12, color: '#FF740D', fontWeight: 500, marginTop: 2 }}>🔥 {h.streak} day streak</p>
+                  </div>
+                  <div style={{ width: 24, height: 24, borderRadius: 12, background: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Settings screen (full, slides in from right) ─────────── */
+    function SettingsContent() {
+      const sections = [
+        {
+          title: 'Notifications',
+          items: [
+            { label: 'Daily reminder', sub: '8:00 AM', toggle: true },
+            { label: 'Streak alerts', sub: 'Warn before you break a streak', toggle: true },
+          ],
+        },
+        {
+          title: 'Appearance',
+          items: [
+            { label: 'Dark mode', sub: 'System default', toggle: false },
+            { label: 'App icon', sub: 'Default' },
+          ],
+        },
+        {
+          title: 'Data',
+          items: [
+            { label: 'Export habits', sub: 'Download as CSV' },
+            { label: 'Reset all data', sub: 'Cannot be undone', danger: true },
+          ],
+        },
+      ];
+
+      return (
+        <div style={{
+          width: '100%', height: '100%',
+          background: '#F8F6F3',
+          display: 'flex', flexDirection: 'column',
+          paddingTop: 54,
+          fontFamily: 'DM Sans, sans-serif',
+          overflow: 'hidden',
+        }}>
+          {/* Nav bar */}
+          <div style={{
+            padding: '14px 20px 12px',
+            borderBottom: '1px solid #EBEBEB',
+            background: '#F8F6F3',
+            flexShrink: 0,
+          }}>
+            <h1 style={{
+              fontFamily: 'DM Serif Display, serif',
+              fontSize: 26, fontWeight: 400, color: '#1A1A1A',
+            }}>Settings</h1>
+          </div>
+
+          {/* Content */}
+          <div className="habit-scroll" style={{ flex: 1, overflowY: 'auto', paddingBottom: 96 }}>
+            {sections.map((section, si) => (
+              <div key={si} style={{ marginTop: si === 0 ? 20 : 28 }}>
+                {/* Section header */}
+                <p style={{
+                  fontSize: 11.5, fontWeight: 600, color: '#A89F95',
+                  letterSpacing: 0.8, textTransform: 'uppercase',
+                  padding: '0 20px', marginBottom: 8,
+                }}>{section.title}</p>
+
+                {/* Section card */}
+                <div style={{ margin: '0 16px', background: '#FFFFFF', borderRadius: 14, overflow: 'hidden', border: '1px solid #EBEBEB' }}>
+                  {section.items.map((item, ii) => (
+                    <div key={ii} style={{
+                      padding: '13px 16px',
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      borderBottom: ii < section.items.length - 1 ? '1px solid #F4F2EF' : 'none',
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 15, fontWeight: 500, color: item.danger ? '#FF3B30' : '#1A1A1A', lineHeight: 1.3 }}>{item.label}</p>
+                        {item.sub && <p style={{ fontSize: 12.5, color: '#A89F95', marginTop: 2 }}>{item.sub}</p>}
+                      </div>
+                      {item.toggle !== undefined ? (
+                        /* Toggle */
+                        <div style={{
+                          width: 48, height: 28, borderRadius: 14,
+                          background: item.toggle ? '#FF740D' : '#E0DDD9',
+                          position: 'relative', flexShrink: 0,
+                        }}>
+                          <div style={{
+                            position: 'absolute',
+                            top: 3,
+                            left: item.toggle ? 23 : 3,
+                            width: 22, height: 22, borderRadius: 11,
+                            background: '#FFFFFF',
+                            transition: 'left 0.2s',
+                          }} />
+                        </div>
+                      ) : !item.danger ? (
+                        /* Chevron */
+                        <svg width="7" height="12" viewBox="0 0 7 12" fill="none"
+                          stroke="#C5BFB8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 1l5 5-5 5"/>
+                        </svg>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Version */}
+            <p style={{ textAlign: 'center', fontSize: 12, color: '#C5BFB8', marginTop: 32, marginBottom: 8 }}>
+              StreakUp v1.0.0
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Transition scene ─────────────────────────────────────── */
+    function TransitionScene() {
+      const W        = 390;
+      const progress = 0.30;                   // 30% through tab transition
+      const homeOff  = -(W * progress * 0.22); // subtle parallax ≈ −26px
+      const settingsOff = W * (1 - progress);  // 273px — 30% visible
+
+      return (
+        <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+
+          {/* Home — slightly pushed left */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            transform: `translateX(${homeOff}px)`,
+          }}>
+            <HomeContent />
+          </div>
+
+          {/* Scrim over home as settings comes in */}
+          <div style={{
+            position: 'absolute', top: 0, bottom: 82,
+            left: 0, right: `${W - settingsOff}px`,
+            background: 'rgba(0,0,0,0.08)',
+            pointerEvents: 'none', zIndex: 5,
+          }} />
+
+          {/* Settings screen — sliding in */}
+          <div style={{
+            position: 'absolute', top: 0, bottom: 0,
+            left: 0, width: W,
+            transform: `translateX(${settingsOff}px)`,
+            boxShadow: '-8px 0 24px rgba(0,0,0,0.12)',
+            zIndex: 10,
+          }}>
+            <SettingsContent />
+          </div>
+
+          {/* Shared nav bar — Settings active, rendered on top of both screens */}
+          <TransitionNav />
+
+        </div>
+      );
+    }
+
+    /* ── Root ──────────────────────────────────────────────────── */
+    function App() {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          minHeight: '100vh', width: '100%', background: '#D8D4CF',
+        }}>
+          <IOSDevice width={390} height={844} dark={false}>
+            <TransitionScene />
+          </IOSDevice>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

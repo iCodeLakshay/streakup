@@ -157,6 +157,7 @@ export const colors = {
 ```
 POST /api/v1/auth/register
 POST /api/v1/auth/login
+GET  /api/v1/auth/me
 GET  /api/v1/habits
 POST /api/v1/habits
 PATCH /api/v1/habits/:id
@@ -165,6 +166,72 @@ POST /api/v1/habits/:id/complete
 DELETE /api/v1/habits/:id/undo
 GET  /api/v1/sync/pull?since=ISO8601
 POST /api/v1/sync/push
+```
+
+### Response Shapes
+
+**Auth** — responses are NOT wrapped in `data`:
+```
+POST /auth/register  → { token: string, user: { id, email } }
+POST /auth/login     → { token: string, user: { id, email } }
+GET  /auth/me        → { user: { id, email, createdAt } }
+```
+
+**Habits** — all success responses wrapped in `{ data: ... }`:
+```
+GET  /habits              → { data: Habit[] }
+POST /habits              → { data: Habit }
+PATCH /habits/:id         → { data: Habit }
+DELETE /habits/:id        → 204 No Content
+POST /habits/:id/complete → { data: { completion: Completion, streak: { currentStreak: number, bestStreak: number } } }
+DELETE /habits/:id/undo   → 204 No Content
+```
+
+**Sync** — all success responses wrapped in `{ data: ... }`:
+```
+GET  /sync/pull → { data: { habits: Habit[], completions: Completion[], deletions: { id: string, archivedAt: string }[] } }
+POST /sync/push → { data: { conflicts: { type: "habit", id: string, serverRecord: Habit }[] } }
+```
+
+**All errors**:
+```
+{ error: string }
+```
+
+### TypeScript Interfaces
+
+```ts
+interface Habit {
+  _id: string;
+  userId: string;
+  name: string;           // max 40 chars
+  emoji: string | null;
+  color: string | null;
+  note: string | null;
+  createdAt: string;      // ISO8601
+  updatedAt: string;      // ISO8601 — used for sync conflict resolution (last-write-wins)
+  archivedAt: string | null;
+}
+
+interface Completion {
+  _id: string;
+  habitId: string;
+  userId: string;
+  date: string;           // "YYYY-MM-DD" — must be client's LOCAL calendar date
+  completedAt: string;    // ISO8601
+  createdAt: string;      // ISO8601
+}
+
+interface StreakMeta {
+  currentStreak: number;
+  bestStreak: number;
+}
+
+interface AuthUser {
+  id: string;
+  email: string;
+  createdAt?: string;     // only present on GET /me
+}
 ```
 
 ---
@@ -177,6 +244,7 @@ POST /api/v1/sync/push
 - Guard all SQLite operations with try/catch
 - Use `useFocusEffect` to refresh data when returning to Home screen
 - Test streak logic edge cases: midnight boundary, DST, new day with no completion
+- Send `date` as the client's local `YYYY-MM-DD` string — never UTC date
 
 ### DON'T
 - Don't use `moment.js` (bundle size)
@@ -185,12 +253,13 @@ POST /api/v1/sync/push
 - Don't block the UI thread with heavy streak computation — use `InteractionManager`
 - Don't hardcode any API URLs — use `EXPO_PUBLIC_API_URL` from `.env`
 - Don't use `any` type — fix the type instead
+- Don't unwrap `data` at the axios level — unwrap in each service function individually
 
 ---
 
 ## Environment Variables (`.env`)
 ```
-EXPO_PUBLIC_API_URL=http://localhost:3000/api/v1
+EXPO_PUBLIC_API_URL=http://localhost:5000/api/v1
 EXPO_PUBLIC_ENV=development
 ```
 

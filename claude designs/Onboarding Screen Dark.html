@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreakUp — Onboarding</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #F0F0F0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Sans', sans-serif;
+    }
+    @keyframes flameFloat {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-8px) scale(1.03); }
+    }
+    @keyframes glowPulse {
+      0%, 100% { opacity: 0.55; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.08); }
+    }
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes dotBounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.25); }
+    }
+    @keyframes btnShimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    @keyframes innerFlicker {
+      0%, 100% { opacity: 1; }
+      40% { opacity: 0.85; }
+      60% { opacity: 0.92; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // ── Flame SVG ──────────────────────────────────────────────────────────────
+    function FlameSVG() {
+      return (
+        <svg width="120" height="148" viewBox="0 0 120 148" fill="none" xmlns="http://www.w3.org/2000/svg"
+          style={{ animation: 'innerFlicker 3s ease-in-out infinite', filter: 'drop-shadow(0 8px 24px rgba(255,140,0,0.45))' }}>
+          <defs>
+            <linearGradient id="flameGrad1" x1="60" y1="0" x2="60" y2="148" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#FFD966" />
+              <stop offset="45%" stopColor="#FFB347" />
+              <stop offset="100%" stopColor="#FF6500" />
+            </linearGradient>
+            <linearGradient id="flameGrad2" x1="60" y1="50" x2="60" y2="148" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#FFD966" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="innerFlame" x1="60" y1="70" x2="60" y2="148" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#FFF9E6" />
+              <stop offset="60%" stopColor="#FFE066" />
+              <stop offset="100%" stopColor="#FFB347" />
+            </linearGradient>
+            <radialGradient id="dropGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#FFF0CC" />
+              <stop offset="100%" stopColor="#FFB347" />
+            </radialGradient>
+          </defs>
+
+          {/* Main flame body */}
+          <path
+            d="M60 4 C60 4 82 28 88 52 C94 70 90 86 84 97 C78 108 68 114 60 116 C52 114 42 108 36 97 C30 86 26 70 32 52 C38 28 60 4 60 4Z"
+            fill="url(#flameGrad1)"
+          />
+
+          {/* Left wisp */}
+          <path
+            d="M38 44 C32 36 28 24 34 14 C30 30 36 40 40 52 C38 50 38 46 38 44Z"
+            fill="#FFD966" opacity="0.7"
+          />
+
+          {/* Right wisp */}
+          <path
+            d="M82 44 C88 36 92 24 86 14 C90 30 84 40 80 52 C82 50 82 46 82 44Z"
+            fill="#FFD966" opacity="0.6"
+          />
+
+          {/* Inner bright core */}
+          <path
+            d="M60 62 C60 62 72 74 74 88 C76 100 70 112 60 116 C50 112 44 100 46 88 C48 74 60 62 60 62Z"
+            fill="url(#innerFlame)"
+            style={{ animation: 'innerFlicker 2.4s ease-in-out infinite' }}
+          />
+
+          {/* Highlight shine */}
+          <ellipse cx="50" cy="76" rx="6" ry="10" fill="url(#flameGrad2)" opacity="0.5" />
+
+          {/* Teardrop highlight */}
+          <circle cx="60" cy="96" r="10" fill="url(#dropGrad)" opacity="0.9" />
+          <circle cx="60" cy="96" r="6" fill="white" opacity="0.45" />
+
+          {/* Small sparkle dots */}
+          <circle cx="75" cy="50" r="3" fill="#FFE8A0" opacity="0.8" />
+          <circle cx="45" cy="58" r="2" fill="#FFE8A0" opacity="0.6" />
+          <circle cx="80" cy="72" r="2" fill="#FFF5CC" opacity="0.7" />
+        </svg>
+      );
+    }
+
+    // ── Onboarding Screen Content ─────────────────────────────────────────────
+    function OnboardingScreen() {
+      const [mounted, setMounted] = useState(false);
+
+      useEffect(() => {
+        const t = setTimeout(() => setMounted(true), 80);
+        return () => clearTimeout(t);
+      }, []);
+
+      const animStyle = (delay) => ({
+        opacity: mounted ? 1 : 0,
+        transform: mounted ? 'translateY(0)' : 'translateY(20px)',
+        transition: `opacity 0.55s ease ${delay}ms, transform 0.55s ease ${delay}ms`,
+      });
+
+      return (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          background: '#1A1A1A',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+          paddingTop: 54,
+          paddingBottom: 0,
+        }}>
+
+          {/* ── Skip button ── */}
+          <div style={{
+            position: 'absolute',
+            top: 60,
+            right: 20,
+            zIndex: 10,
+            ...animStyle(0),
+          }}>
+            <button style={{
+              background: 'none',
+              border: 'none',
+              fontSize: 16,
+              fontFamily: 'DM Sans, sans-serif',
+              fontWeight: 500,
+              color: '#9E9E9E',
+              cursor: 'pointer',
+              padding: '6px 4px',
+            }}>Skip</button>
+          </div>
+
+          {/* ── Hero area — radial glow + flame ── */}
+          <div style={{
+            flex: '0 0 auto',
+            marginTop: 32,
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            height: 220,
+            ...animStyle(80),
+          }}>
+            {/* Large ambient dark glow — wider spread for dark bg */}
+            <div style={{
+              position: 'absolute',
+              width: 320,
+              height: 320,
+              borderRadius: '50%',
+              background: 'radial-gradient(ellipse at center, rgba(255,160,50,0.30) 0%, rgba(255,120,0,0.14) 45%, transparent 70%)',
+              animation: 'glowPulse 3s ease-in-out infinite',
+            }} />
+            {/* Mid glow */}
+            <div style={{
+              position: 'absolute',
+              width: 200,
+              height: 200,
+              borderRadius: '50%',
+              background: 'radial-gradient(ellipse at center, rgba(255,200,80,0.30) 0%, rgba(255,140,0,0.12) 55%, transparent 80%)',
+              animation: 'glowPulse 3s ease-in-out infinite 0.5s',
+            }} />
+            {/* Tight inner core glow */}
+            <div style={{
+              position: 'absolute',
+              width: 130,
+              height: 130,
+              borderRadius: '50%',
+              background: 'radial-gradient(ellipse at center, rgba(255,220,120,0.22) 0%, transparent 70%)',
+              animation: 'glowPulse 2.4s ease-in-out infinite 0.9s',
+            }} />
+
+            {/* Flame illustration */}
+            <div style={{ animation: 'flameFloat 3.2s ease-in-out infinite', zIndex: 2 }}>
+              <FlameSVG />
+            </div>
+          </div>
+
+          {/* ── Copy block ── */}
+          <div style={{
+            flex: '0 0 auto',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 10,
+            padding: '0 32px',
+            marginTop: 12,
+            textAlign: 'center',
+            ...animStyle(200),
+          }}>
+            <h1 style={{
+              fontFamily: 'DM Serif Display, serif',
+              fontSize: 28,
+              fontWeight: 400,
+              lineHeight: 1.2,
+              color: '#F5F5F5',
+              letterSpacing: -0.3,
+            }}>
+              Build habits that stick.
+            </h1>
+            <p style={{
+              fontFamily: 'DM Sans, sans-serif',
+              fontSize: 16,
+              fontWeight: 400,
+              lineHeight: 1.5,
+              color: '#9E9E9E',
+              maxWidth: 260,
+            }}>
+              Track your daily streaks and never break the chain.
+            </p>
+          </div>
+
+          {/* ── Pagination dots ── */}
+          <div style={{
+            flex: '0 0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 28,
+            ...animStyle(320),
+          }}>
+            {[true, false, false].map((active, i) => (
+              <div key={i} style={{
+                width: active ? 22 : 8,
+                height: 8,
+                borderRadius: 100,
+                background: active ? '#FF8C00' : '#444444',
+                transition: 'width 0.3s ease, background 0.3s ease',
+              }} />
+            ))}
+          </div>
+
+          {/* ── Spacer ── */}
+          <div style={{ flex: 1 }} />
+
+          {/* ── CTA area ── */}
+          <div style={{
+            flex: '0 0 auto',
+            width: '100%',
+            padding: '0 24px',
+            paddingBottom: 48,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 16,
+            ...animStyle(440),
+          }}>
+            {/* Get Started button */}
+            <button
+              style={{
+                width: '100%',
+                height: 56,
+                borderRadius: 28,
+                border: 'none',
+                background: 'linear-gradient(135deg, #FFB347 0%, #FF8C00 50%, #FF6500 100%)',
+                backgroundSize: '200% auto',
+                color: '#FFFFFF',
+                fontSize: 17,
+                fontFamily: 'DM Sans, sans-serif',
+                fontWeight: 700,
+                letterSpacing: 0.2,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(255,101,0,0.30)',
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'transform 0.12s ease, box-shadow 0.12s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'scale(0.98)';
+                e.currentTarget.style.boxShadow = '0 3px 10px rgba(255,101,0,0.35)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(255,101,0,0.30)';
+              }}
+              onMouseDown={e => {
+                e.currentTarget.style.transform = 'scale(0.96)';
+              }}
+              onMouseUp={e => {
+                e.currentTarget.style.transform = 'scale(0.98)';
+              }}
+            >
+              {/* Shimmer overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0, left: '-100%',
+                width: '60%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)',
+                animation: 'btnShimmer 2.8s linear infinite',
+                pointerEvents: 'none',
+              }} />
+              Get Started
+            </button>
+
+            {/* Log in link */}
+            <p style={{
+              fontFamily: 'DM Sans, sans-serif',
+              fontSize: 14,
+              fontWeight: 400,
+              color: '#9E9E9E',
+            }}>
+              Already have an account?{' '}
+              <span style={{
+                color: '#FF8C00',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}>
+                Log in
+              </span>
+            </p>
+          </div>
+
+        </div>
+      );
+    }
+
+    // ── Root App ───────────────────────────────────────────────────────────────
+    function App() {
+      return (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          width: '100%',
+          background: '#111111',
+        }}>
+          <IOSDevice width={390} height={844} dark={true}>
+            <OnboardingScreen />
+          </IOSDevice>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
