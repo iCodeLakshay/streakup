@@ -43,8 +43,8 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack initialRouteName="onboarding/index">
         <Stack.Screen name="onboarding/index" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding/step2" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding/step3" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding/habit-picker" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding/permissions" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>

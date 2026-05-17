@@ -1,86 +1,56 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import {
-  Animated,
-  Easing,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, Easing, GestureResponderEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, {
-  Circle,
-  Defs,
-  Ellipse,
-  LinearGradient,
-  Path,
-  RadialGradient,
-  Stop,
-} from 'react-native-svg';
-
+import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, RadialGradient, Stop } from 'react-native-svg';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-// ── Theme tokens ───────────────────────────────────────────────────────────────
-const theme = {
-  light: {
-    background: '#FFFFFF',
-    headline: '#1A1A1A',
-    subtext: '#9E9E9E',
-    dotInactive: '#E0E0E0',
-    loginText: '#9E9E9E',
-    glowOuter: 'rgba(255,179,71,0.18)',
-    glowMid: 'rgba(255,210,100,0.25)',
-    glowInner: null,
+const SLIDES = [
+  {
+    headline: 'Build habits that stick.',
+    subtext:  'Track your daily streaks and never break the chain.',
   },
-  dark: {
-    background: '#1A1A1A',
-    headline: '#F5F5F5',
-    subtext: '#9E9E9E',
-    dotInactive: '#444444',
-    loginText: '#9E9E9E',
-    glowOuter: 'rgba(255,160,50,0.22)',
-    glowMid: 'rgba(255,200,80,0.22)',
-    glowInner: 'rgba(255,220,120,0.15)',
+  {
+    headline: 'Small steps, big wins.',
+    subtext:  'Just one minute a day is enough to start a streak.',
   },
-} as const;
+  {
+    headline: 'Never lose your streak.',
+    subtext:  'StreakUp reminds you before the day slips away.',
+  },
+] as const;
 
-// ── Flame SVG (same for both modes — flame is always vivid) ──────────────────
+const AUTO_ADVANCE_MS = 3000;
+
 function FlameSVG() {
   return (
     <Svg width={120} height={148} viewBox="0 0 120 148" fill="none">
       <Defs>
-        <LinearGradient id="flameGrad1" x1="60" y1="0" x2="60" y2="148" gradientUnits="userSpaceOnUse">
+        <LinearGradient id="fg1" x1="60" y1="0" x2="60" y2="148" gradientUnits="userSpaceOnUse">
           <Stop offset="0%" stopColor="#FFD966" />
           <Stop offset="45%" stopColor="#FFB347" />
           <Stop offset="100%" stopColor="#FF6500" />
         </LinearGradient>
-        <LinearGradient id="flameGrad2" x1="60" y1="50" x2="60" y2="148" gradientUnits="userSpaceOnUse">
+        <LinearGradient id="fg2" x1="60" y1="50" x2="60" y2="148" gradientUnits="userSpaceOnUse">
           <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.7" />
           <Stop offset="100%" stopColor="#FFD966" stopOpacity="0" />
         </LinearGradient>
-        <LinearGradient id="innerFlame" x1="60" y1="70" x2="60" y2="148" gradientUnits="userSpaceOnUse">
+        <LinearGradient id="fg3" x1="60" y1="70" x2="60" y2="148" gradientUnits="userSpaceOnUse">
           <Stop offset="0%" stopColor="#FFF9E6" />
           <Stop offset="60%" stopColor="#FFE066" />
           <Stop offset="100%" stopColor="#FFB347" />
         </LinearGradient>
-        <RadialGradient id="dropGrad" cx="50%" cy="50%" r="50%">
+        <RadialGradient id="fg4" cx="50%" cy="50%" r="50%">
           <Stop offset="0%" stopColor="#FFF0CC" />
           <Stop offset="100%" stopColor="#FFB347" />
         </RadialGradient>
       </Defs>
-      <Path
-        d="M60 4 C60 4 82 28 88 52 C94 70 90 86 84 97 C78 108 68 114 60 116 C52 114 42 108 36 97 C30 86 26 70 32 52 C38 28 60 4 60 4Z"
-        fill="url(#flameGrad1)"
-      />
+      <Path d="M60 4 C60 4 82 28 88 52 C94 70 90 86 84 97 C78 108 68 114 60 116 C52 114 42 108 36 97 C30 86 26 70 32 52 C38 28 60 4 60 4Z" fill="url(#fg1)" />
       <Path d="M38 44 C32 36 28 24 34 14 C30 30 36 40 40 52 C38 50 38 46 38 44Z" fill="#FFD966" fillOpacity={0.7} />
       <Path d="M82 44 C88 36 92 24 86 14 C90 30 84 40 80 52 C82 50 82 46 82 44Z" fill="#FFD966" fillOpacity={0.6} />
-      <Path
-        d="M60 62 C60 62 72 74 74 88 C76 100 70 112 60 116 C50 112 44 100 46 88 C48 74 60 62 60 62Z"
-        fill="url(#innerFlame)"
-      />
-      <Ellipse cx={50} cy={76} rx={6} ry={10} fill="url(#flameGrad2)" fillOpacity={0.5} />
-      <Circle cx={60} cy={96} r={10} fill="url(#dropGrad)" fillOpacity={0.9} />
+      <Path d="M60 62 C60 62 72 74 74 88 C76 100 70 112 60 116 C50 112 44 100 46 88 C48 74 60 62 60 62Z" fill="url(#fg3)" />
+      <Ellipse cx={50} cy={76} rx={6} ry={10} fill="url(#fg2)" fillOpacity={0.5} />
+      <Circle cx={60} cy={96} r={10} fill="url(#fg4)" fillOpacity={0.9} />
       <Circle cx={60} cy={96} r={6} fill="white" fillOpacity={0.45} />
       <Circle cx={75} cy={50} r={3} fill="#FFE8A0" fillOpacity={0.8} />
       <Circle cx={45} cy={58} r={2} fill="#FFE8A0" fillOpacity={0.6} />
@@ -89,162 +59,201 @@ function FlameSVG() {
   );
 }
 
-// ── Onboarding Screen ──────────────────────────────────────────────────────────
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
-  const t = colorScheme === 'dark' ? theme.dark : theme.light;
-  const isDark = colorScheme === 'dark';
+  const isDark = useColorScheme() === 'dark';
 
-  // Entrance animations — 4 staggered groups
-  const fadeAnims = useRef([0, 1, 2, 3].map(() => new Animated.Value(0))).current;
-  const slideAnims = useRef([0, 1, 2, 3].map(() => new Animated.Value(20))).current;
+  // ── Slide state ──────────────────────────────────────────────────────────
+  const [activeIdx, setActiveIdx] = useState(0);
+  const slideOpacity    = useRef(new Animated.Value(1)).current;
+  const slideTranslateX = useRef(new Animated.Value(0)).current;
+  const swipeStartX     = useRef<number | null>(null);
 
-  // Flame float
-  const flameY = useRef(new Animated.Value(0)).current;
+  // ── Entrance animations ──────────────────────────────────────────────────
+  const fade  = useRef([0,1,2,3].map(() => new Animated.Value(0))).current;
+  const slide = useRef([0,1,2,3].map(() => new Animated.Value(20))).current;
+
+  // ── Flame float ──────────────────────────────────────────────────────────
+  const flameY     = useRef(new Animated.Value(0)).current;
   const flameScale = useRef(new Animated.Value(1)).current;
 
-  // Glow pulse
-  const glowOpacity = useRef(new Animated.Value(0.55)).current;
-  const glowScale = useRef(new Animated.Value(1)).current;
-  const glowOpacity2 = useRef(new Animated.Value(0.55)).current;
-  const glowScale2 = useRef(new Animated.Value(1)).current;
+  // ── Glow pulse (two offset rings) ────────────────────────────────────────
+  const glowA      = useRef(new Animated.Value(0.55)).current;
+  const glowAScale = useRef(new Animated.Value(1)).current;
+  const glowB      = useRef(new Animated.Value(0.55)).current;
+  const glowBScale = useRef(new Animated.Value(1)).current;
 
+  // ── Transition to a slide index with fade+slide animation ────────────────
+  const activeIdxRef = useRef(activeIdx);
+  activeIdxRef.current = activeIdx;
+
+  const goToSlide = useCallback((next: number) => {
+    const direction = next > activeIdxRef.current ? 1 : -1;
+    Animated.parallel([
+      Animated.timing(slideOpacity,    { toValue: 0, duration: 180, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(slideTranslateX, { toValue: -24 * direction, duration: 180, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+    ]).start(() => {
+      setActiveIdx(next);
+      slideTranslateX.setValue(24 * direction);
+      Animated.parallel([
+        Animated.timing(slideOpacity,    { toValue: 1, duration: 260, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(slideTranslateX, { toValue: 0, duration: 260, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      ]).start();
+    });
+  }, [slideOpacity, slideTranslateX]);
+
+  // ── Auto-advance ─────────────────────────────────────────────────────────
   useEffect(() => {
-    const delays = [0, 80, 200, 440];
+    const id = setInterval(() => {
+      goToSlide((activeIdxRef.current + 1) % SLIDES.length);
+    }, AUTO_ADVANCE_MS);
+    return () => clearInterval(id);
+  }, [goToSlide]);
+
+  // ── Entrance + ambient animations ────────────────────────────────────────
+  useEffect(() => {
     Animated.parallel(
-      fadeAnims.map((anim, i) =>
+      fade.map((a, i) =>
         Animated.parallel([
-          Animated.timing(anim, { toValue: 1, duration: 550, delay: delays[i], easing: Easing.out(Easing.ease), useNativeDriver: true }),
-          Animated.timing(slideAnims[i], { toValue: 0, duration: 550, delay: delays[i], easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(a,        { toValue: 1, duration: 550, delay: [0,80,200,440][i], easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(slide[i], { toValue: 0, duration: 550, delay: [0,80,200,440][i], easing: Easing.out(Easing.ease), useNativeDriver: true }),
         ])
       )
     ).start();
 
-    // Flame float
-    Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(flameY, { toValue: -8, duration: 1600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(flameScale, { toValue: 1.03, duration: 1600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        ]),
-        Animated.parallel([
-          Animated.timing(flameY, { toValue: 0, duration: 1600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(flameScale, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        ]),
-      ])
-    ).start();
+    Animated.loop(Animated.sequence([
+      Animated.parallel([
+        Animated.timing(flameY,     { toValue: -8,   duration: 1600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(flameScale, { toValue: 1.03, duration: 1600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(flameY,     { toValue: 0, duration: 1600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(flameScale, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    ])).start();
 
-    // Outer glow pulse
-    Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(glowOpacity, { toValue: 0.85, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(glowScale, { toValue: 1.08, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        ]),
-        Animated.parallel([
-          Animated.timing(glowOpacity, { toValue: 0.55, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(glowScale, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        ]),
-      ])
-    ).start();
+    Animated.loop(Animated.sequence([
+      Animated.parallel([
+        Animated.timing(glowA,      { toValue: 0.85, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(glowAScale, { toValue: 1.08, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(glowA,      { toValue: 0.55, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(glowAScale, { toValue: 1,    duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    ])).start();
 
-    // Inner glow pulse (offset)
-    Animated.loop(
-      Animated.sequence([
-        Animated.delay(500),
-        Animated.parallel([
-          Animated.timing(glowOpacity2, { toValue: 0.85, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(glowScale2, { toValue: 1.08, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        ]),
-        Animated.parallel([
-          Animated.timing(glowOpacity2, { toValue: 0.55, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(glowScale2, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        ]),
-      ])
-    ).start();
+    Animated.loop(Animated.sequence([
+      Animated.delay(500),
+      Animated.parallel([
+        Animated.timing(glowB,      { toValue: 0.85, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(glowBScale, { toValue: 1.08, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(glowB,      { toValue: 0.55, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(glowBScale, { toValue: 1,    duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    ])).start();
   }, []);
 
-  const animStyle = (i: number) => ({
-    opacity: fadeAnims[i],
-    transform: [{ translateY: slideAnims[i] }],
+  const anim = (i: number) => ({
+    opacity: fade[i],
+    transform: [{ translateY: slide[i] }],
   });
 
+  // ── Swipe handlers ───────────────────────────────────────────────────────
+  const onTouchStart = (e: GestureResponderEvent) => {
+    swipeStartX.current = e.nativeEvent.pageX;
+  };
+  const onTouchEnd = (e: GestureResponderEvent) => {
+    if (swipeStartX.current === null) return;
+    const dx = e.nativeEvent.pageX - swipeStartX.current;
+    swipeStartX.current = null;
+    if (Math.abs(dx) < 30) return;
+    const next = dx < 0
+      ? Math.min(activeIdx + 1, SLIDES.length - 1)
+      : Math.max(activeIdx - 1, 0);
+    if (next !== activeIdx) goToSlide(next);
+  };
+
+  const headlineColor = isDark ? '#F5F5F5' : '#1A1A1A';
+  const dotInactive   = isDark ? '#444444' : '#E0E0E0';
+
   return (
-    <View style={[styles.container, { backgroundColor: t.background, paddingTop: insets.top + 8, paddingBottom: insets.bottom }]}>
+    <View style={[styles.screen, { backgroundColor: isDark ? '#1A1A1A' : '#FFFFFF', paddingTop: insets.top, paddingBottom: insets.bottom }]}>
 
       {/* Skip */}
-      <Animated.View style={[styles.skipContainer, animStyle(0)]}>
-        <Pressable
-          onPress={() => router.replace('/(tabs)')}
-          style={({ pressed }) => [styles.skipBtn, pressed && { opacity: 0.5 }]}
-          hitSlop={12}
-        >
-          <Text style={[styles.skipText, { color: t.subtext }]}>Skip</Text>
+      <Animated.View style={[styles.skipWrap, anim(0)]}>
+        <Pressable onPress={() => router.replace('/(tabs)')} hitSlop={12} style={styles.skipBtn}>
+          {({ pressed }) => (
+            <Text style={[styles.skipText, { opacity: pressed ? 0.5 : 1 }]}>Skip</Text>
+          )}
         </Pressable>
       </Animated.View>
 
-      {/* Hero: glow rings + flame */}
-      <Animated.View style={[styles.heroArea, animStyle(1)]}>
-        {/* Outer glow */}
-        <Animated.View style={[
-          styles.glowOuter,
-          isDark ? styles.glowOuterDark : styles.glowOuterLight,
-          { opacity: glowOpacity, transform: [{ scale: glowScale }] },
-        ]} />
-        {/* Mid glow */}
-        <Animated.View style={[
-          styles.glowMid,
-          isDark ? styles.glowMidDark : styles.glowMidLight,
-          { opacity: glowOpacity2, transform: [{ scale: glowScale2 }] },
-        ]} />
-        {/* Dark-only inner core glow */}
-        {isDark && (
+      {/* ── Middle: vertically centered ── */}
+      <View
+        style={styles.middle}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        {/* Hero */}
+        <Animated.View style={[styles.hero, anim(1)]}>
           <Animated.View style={[
-            styles.glowCore,
-            { opacity: glowOpacity, transform: [{ scale: glowScale }] },
+            styles.glowRing,
+            isDark
+              ? { width: 320, height: 320, marginLeft: -160, marginTop: -160, backgroundColor: 'rgba(255,160,50,0.22)' }
+              : { width: 260, height: 260, marginLeft: -130, marginTop: -130, backgroundColor: 'rgba(255,179,71,0.18)' },
+            { opacity: glowA, transform: [{ scale: glowAScale }] },
           ]} />
-        )}
-        {/* Flame */}
-        <Animated.View style={{ transform: [{ translateY: flameY }, { scale: flameScale }] }}>
-          <FlameSVG />
+          <Animated.View style={[
+            styles.glowRing,
+            isDark
+              ? { width: 200, height: 200, marginLeft: -100, marginTop: -100, backgroundColor: 'rgba(255,200,80,0.22)' }
+              : { width: 180, height: 180, marginLeft:  -90, marginTop:  -90, backgroundColor: 'rgba(255,210,100,0.25)' },
+            { opacity: glowB, transform: [{ scale: glowBScale }] },
+          ]} />
+          {isDark && (
+            <Animated.View style={[styles.glowCore, { opacity: glowA, transform: [{ scale: glowAScale }] }]} />
+          )}
+          <Animated.View style={{ transform: [{ translateY: flameY }, { scale: flameScale }], zIndex: 2 }}>
+            <FlameSVG />
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
 
-      {/* Copy */}
-      <Animated.View style={[styles.copyBlock, animStyle(2)]}>
-        <Text style={[styles.headline, { color: t.headline }]}>Build habits that stick.</Text>
-        <Text style={[styles.subtext, { color: t.subtext }]}>
-          Track your daily streaks and never break the chain.
-        </Text>
-      </Animated.View>
+        {/* Sliding copy — fades + slides on change */}
+        <Animated.View style={[styles.copy, anim(2), { opacity: slideOpacity, transform: [{ translateX: slideTranslateX }] }]}>
+          <Text style={[styles.headline, { color: headlineColor }]}>
+            {SLIDES[activeIdx].headline}
+          </Text>
+          <Text style={styles.subtext}>
+            {SLIDES[activeIdx].subtext}
+          </Text>
+        </Animated.View>
 
-      {/* Pagination dots */}
-      <Animated.View style={[styles.dotsRow, animStyle(2)]}>
-        {[true, false, false].map((active, i) => (
-          <View
-            key={i}
-            style={[
-              styles.dot,
-              active ? styles.dotActive : { width: 8, backgroundColor: t.dotInactive },
-            ]}
-          />
-        ))}
-      </Animated.View>
+        {/* Dots — active dot tracks current slide */}
+        <Animated.View style={[styles.dots, anim(2)]}>
+          {SLIDES.map((_, i) => (
+            <Pressable key={i} onPress={() => goToSlide(i)} hitSlop={8}>
+              <View style={[styles.dot, {
+                width: i === activeIdx ? 22 : 8,
+                backgroundColor: i === activeIdx ? '#FF8C00' : dotInactive,
+              }]} />
+            </Pressable>
+          ))}
+        </Animated.View>
+      </View>
 
-      <View style={{ flex: 1 }} />
-
-      {/* CTA */}
-      <Animated.View style={[styles.ctaArea, animStyle(3)]}>
+      {/* ── CTA pinned to bottom ── */}
+      <Animated.View style={[styles.cta, anim(3)]}>
         <Pressable
-          onPress={() => router.push('/onboarding/step2' as any)}
+          onPress={() => router.push('/onboarding/habit-picker' as any)}
           style={({ pressed }) => [styles.getStartedBtn, pressed && styles.getStartedBtnPressed]}
         >
           <Text style={styles.getStartedText}>Get Started</Text>
         </Pressable>
-
-        <Text style={[styles.loginText, { color: t.loginText }]}>
+        <Text style={[styles.loginText, { color: '#9E9E9E' }]}>
           Already have an account?{' '}
           <Text style={styles.loginLink} onPress={() => router.push('/login' as any)}>
             Log in
@@ -257,12 +266,12 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     alignItems: 'center',
     overflow: 'hidden',
   },
-  skipContainer: {
+  skipWrap: {
     position: 'absolute',
     top: 60,
     right: 20,
@@ -275,51 +284,39 @@ const styles = StyleSheet.create({
   skipText: {
     fontSize: 16,
     fontFamily: 'DMSans_500Medium',
+    color: '#9E9E9E',
   },
-  heroArea: {
-    marginTop: 32,
+  middle: {
+    flex: 1,
     width: '100%',
-    height: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hero: {
+    width: '100%',
+    height: 260,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
-  glowOuter: {
+  glowRing: {
     position: 'absolute',
-    borderRadius: 160,
-  },
-  glowOuterLight: {
-    width: 260,
-    height: 260,
-    backgroundColor: 'rgba(255,179,71,0.18)',
-  },
-  glowOuterDark: {
-    width: 320,
-    height: 320,
-    backgroundColor: 'rgba(255,160,50,0.22)',
-  },
-  glowMid: {
-    position: 'absolute',
-    borderRadius: 100,
-  },
-  glowMidLight: {
-    width: 180,
-    height: 180,
-    backgroundColor: 'rgba(255,210,100,0.25)',
-  },
-  glowMidDark: {
-    width: 200,
-    height: 200,
-    backgroundColor: 'rgba(255,200,80,0.22)',
+    borderRadius: 999,
+    left: '50%',
+    top: '50%',
   },
   glowCore: {
     position: 'absolute',
     width: 130,
     height: 130,
-    borderRadius: 65,
+    borderRadius: 999,
     backgroundColor: 'rgba(255,220,120,0.15)',
+    left: '50%',
+    top: '50%',
+    marginLeft: -65,
+    marginTop: -65,
   },
-  copyBlock: {
+  copy: {
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 32,
@@ -336,10 +333,11 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans_400Regular',
     fontSize: 16,
     lineHeight: 24,
-    maxWidth: 260,
+    color: '#9E9E9E',
     textAlign: 'center',
+    maxWidth: 260,
   },
-  dotsRow: {
+  dots: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -347,13 +345,9 @@ const styles = StyleSheet.create({
   },
   dot: {
     height: 8,
-    borderRadius: 100,
+    borderRadius: 99,
   },
-  dotActive: {
-    width: 22,
-    backgroundColor: '#FF8C00',
-  },
-  ctaArea: {
+  cta: {
     width: '100%',
     paddingHorizontal: 24,
     paddingBottom: 48,
@@ -375,12 +369,11 @@ const styles = StyleSheet.create({
   },
   getStartedBtnPressed: {
     transform: [{ scale: 0.97 }],
-    shadowOpacity: 0.15,
+    opacity: 0.9,
   },
   getStartedText: {
     fontFamily: 'DMSans_700Bold',
     fontSize: 17,
-    fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.2,
   },
@@ -391,6 +384,5 @@ const styles = StyleSheet.create({
   loginLink: {
     color: '#FF8C00',
     fontFamily: 'DMSans_700Bold',
-    fontWeight: '600',
   },
 });

@@ -1,77 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  Easing,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+  Animated, Easing, StyleSheet, Pressable, View, Text,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Path, Stop, Rect, Line, Polyline } from 'react-native-svg';
-
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-// ── Theme ─────────────────────────────────────────────────────────────────────
-type Theme = Record<string, string>;
-
-const theme: { light: Theme; dark: Theme } = {
-  light: {
-    background: '#FFFFFF',
-    card: '#FAFAF8',
-    cardBorder: '#EEEBE6',
-    navBtn: '#FAFAFA',
-    navBtnBorder: '#EBEBEB',
-    navBtnIcon: '#1A1A1A',
-    dotInactive: '#E8E4DF',
-    headline: '#1A1A1A',
-    subtext: '#A89F95',
-    permCardTitle: '#1A1A1A',
-    permCardCaption: '#A89F95',
-    iconCircleBg: '#FF740D',
-    widgetBg: '#F0F4F8',
-    widgetBorder: 'rgba(255,255,255,0.8)',
-    widgetLabel: 'rgba(30,60,100,0.5)',
-    widgetInner: '#FFF8F0',
-    widgetInnerBorder: 'rgba(255,116,13,0.18)',
-    widgetHabitName: '#1A1A1A',
-    widgetStreakLabel: '#A89F95',
-    widgetDayFilled: '#FF740D',
-    widgetDayEmpty: 'rgba(0,0,0,0.07)',
-    widgetDayLabelFilled: '#FF740D',
-    widgetDayLabelEmpty: '#C5BFB8',
-    footerText: '#C5BFB8',
-  },
-  dark: {
-    background: '#1A1A1A',
-    card: '#2A2A2A',
-    cardBorder: '#383838',
-    navBtn: '#2A2A2A',
-    navBtnBorder: '#333333',
-    navBtnIcon: '#F5F5F5',
-    dotInactive: '#444444',
-    headline: '#F5F5F5',
-    subtext: '#666666',
-    permCardTitle: '#F5F5F5',
-    permCardCaption: '#666666',
-    iconCircleBg: '#CC6A00',
-    widgetBg: '#252525',
-    widgetBorder: 'rgba(255,255,255,0.08)',
-    widgetLabel: 'rgba(255,255,255,0.3)',
-    widgetInner: '#333333',
-    widgetInnerBorder: 'rgba(255,116,13,0.25)',
-    widgetHabitName: '#F5F5F5',
-    widgetStreakLabel: '#888888',
-    widgetDayFilled: '#FF740D',
-    widgetDayEmpty: 'rgba(255,255,255,0.10)',
-    widgetDayLabelFilled: '#FF740D',
-    widgetDayLabelEmpty: '#555555',
-    footerText: '#555555',
-  },
-};
-
-// ── Icons ─────────────────────────────────────────────────────────────────────
 function BellIcon({ color = '#fff', size = 20 }: { color?: string; size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
@@ -129,28 +64,30 @@ function FlameWidgetIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-// ── Permission Card ───────────────────────────────────────────────────────────
 function PermCard({
-  icon, title, caption, btnLabel, filled, allowed, onAllow, t,
+  icon, title, caption, btnLabel, filled, allowed, onAllow, isDark,
 }: {
   icon: React.ReactNode; title: string; caption: string;
   btnLabel: string; filled: boolean; allowed: boolean;
-  onAllow: () => void;
-  t: Theme;
+  onAllow: () => void; isDark: boolean;
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
-
   const pressIn = () => Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true }).start();
   const pressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
 
+  const cardBg = isDark ? '#2A2A2A' : '#FAFAF8';
+  const cardBorder = isDark ? '#383838' : '#EEEBE6';
+  const titleColor = isDark ? '#F5F5F5' : '#1A1A1A';
+  const captionColor = isDark ? '#666666' : '#A89F95';
+
   return (
-    <View style={[styles.permCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-      <View style={[styles.permIconCircle, { backgroundColor: t.iconCircleBg }]}>
+    <View style={[styles.permCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+      <View style={styles.permIconCircle}>
         {icon}
       </View>
       <View style={styles.permText}>
-        <Text style={[styles.permTitle, { color: t.permCardTitle }]}>{title}</Text>
-        <Text style={[styles.permCaption, { color: t.permCardCaption }]}>{caption}</Text>
+        <Text style={[styles.permTitle, { color: titleColor }]}>{title}</Text>
+        <Text style={[styles.permCaption, { color: captionColor }]}>{caption}</Text>
       </View>
       {allowed ? (
         <View style={styles.checkCircle}>
@@ -163,13 +100,15 @@ function PermCard({
             onPressIn={pressIn}
             onPressOut={pressOut}
             style={[
-              styles.permBtn,
+              styles.allowBtn,
               filled
-                ? { backgroundColor: '#FF740D', borderWidth: 0 }
+                ? { backgroundColor: '#FF740D' }
                 : { borderWidth: 1.5, borderColor: '#FF740D', backgroundColor: 'transparent' },
             ]}
           >
-            <Text style={[styles.permBtnText, { color: filled ? '#FFFFFF' : '#FF740D' }]}>{btnLabel}</Text>
+            <Text style={[styles.allowBtnText, { color: filled ? '#FFFFFF' : '#FF740D' }]}>
+              {btnLabel}
+            </Text>
           </Pressable>
         </Animated.View>
       )}
@@ -177,8 +116,7 @@ function PermCard({
   );
 }
 
-// ── Widget Preview ────────────────────────────────────────────────────────────
-function WidgetPreview({ t }: { t: Theme }) {
+function WidgetPreview({ isDark }: { isDark: boolean }) {
   const floatY = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(
@@ -190,26 +128,42 @@ function WidgetPreview({ t }: { t: Theme }) {
   }, []);
 
   const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const phoneBg = isDark ? '#252525' : '#F0F4F8';
+  const phoneBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.8)';
+  const labelColor = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(30,60,100,0.5)';
+  const innerBg = isDark ? '#333333' : '#FFF8F0';
+  const innerBorder = isDark ? 'rgba(255,116,13,0.25)' : 'rgba(255,116,13,0.18)';
+  const habitNameColor = isDark ? '#F5F5F5' : '#1A1A1A';
+  const streakLabelColor = isDark ? '#888888' : '#A89F95';
+  const dayEmpty = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)';
+  const dayLabelEmpty = isDark ? '#555555' : '#C5BFB8';
 
   return (
-    <View style={styles.widgetOuter}>
-      <Animated.View style={[styles.widgetPhone, { backgroundColor: t.widgetBg, borderColor: t.widgetBorder }, { transform: [{ translateY: floatY }] }]}>
-        <Text style={[styles.widgetHomeLabel, { color: t.widgetLabel }]}>HOME SCREEN</Text>
-        <View style={[styles.widgetInner, { backgroundColor: t.widgetInner, borderColor: t.widgetInnerBorder }]}>
-          <View style={styles.widgetTopRow}>
-            <Text style={styles.widgetAppName}>StreakUp</Text>
+    <View style={styles.widgetWrap}>
+      <Animated.View
+        style={[
+          styles.widgetOuter,
+          { backgroundColor: phoneBg, borderColor: phoneBorder },
+          styles.widgetShadow,
+          { transform: [{ translateY: floatY }] },
+        ]}
+      >
+        <Text style={[styles.widgetLabel, { color: labelColor }]}>HOME SCREEN</Text>
+        <View style={[styles.widgetInner, { backgroundColor: innerBg, borderColor: innerBorder }]}>
+          <View style={styles.widgetHeader}>
+            <Text style={styles.widgetBrand}>StreakUp</Text>
             <FlameWidgetIcon size={16} />
           </View>
-          <Text style={[styles.widgetHabitName, { color: t.widgetHabitName }]}>Morning Run</Text>
+          <Text style={[styles.widgetHabitName, { color: habitNameColor }]}>Morning Run</Text>
           <View style={styles.widgetStreakRow}>
-            <Text style={styles.widgetStreakCount}>3</Text>
-            <Text style={[styles.widgetStreakLabel, { color: t.widgetStreakLabel }]}>day streak</Text>
+            <Text style={styles.widgetStreakNum}>3</Text>
+            <Text style={[styles.widgetStreakLabel, { color: streakLabelColor }]}>day streak</Text>
           </View>
           <View style={styles.widgetDays}>
             {DAYS.map((d, i) => (
               <View key={i} style={styles.widgetDayCol}>
-                <View style={[styles.widgetDayBar, { backgroundColor: i < 3 ? t.widgetDayFilled : t.widgetDayEmpty }]} />
-                <Text style={[styles.widgetDayLabel, { color: i < 3 ? t.widgetDayLabelFilled : t.widgetDayLabelEmpty }]}>{d}</Text>
+                <View style={[styles.widgetDayBar, { backgroundColor: i < 3 ? '#FF740D' : dayEmpty }]} />
+                <Text style={[styles.widgetDayText, { color: i < 3 ? '#FF740D' : dayLabelEmpty }]}>{d}</Text>
               </View>
             ))}
           </View>
@@ -219,12 +173,11 @@ function WidgetPreview({ t }: { t: Theme }) {
   );
 }
 
-// ── Screen ────────────────────────────────────────────────────────────────────
-export default function OnboardingStep3() {
+export default function PermissionsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
-  const t = colorScheme === 'dark' ? theme.dark : theme.light;
+  const isDark = colorScheme === 'dark';
 
   const [notifAllowed, setNotifAllowed] = useState(false);
   const [widgetAllowed, setWidgetAllowed] = useState(false);
@@ -249,39 +202,50 @@ export default function OnboardingStep3() {
     transform: [{ translateY: slideAnims[i] }],
   });
 
+  const bg = isDark ? '#1A1A1A' : '#FFFFFF';
+  const navBtnBg = isDark ? '#2A2A2A' : '#FAFAFA';
+  const navBtnBorder = isDark ? '#333333' : '#EBEBEB';
+  const navIconColor = isDark ? '#F5F5F5' : '#1A1A1A';
+  const dotInactive = isDark ? '#444444' : '#E8E4DF';
+  const headlineColor = isDark ? '#F5F5F5' : '#1A1A1A';
+  const subtextColor = isDark ? '#666666' : '#A89F95';
+  const footerColor = isDark ? '#555555' : '#C5BFB8';
+
   return (
-    <View style={[styles.container, { backgroundColor: t.background, paddingTop: insets.top }]}>
+    <View style={[styles.root, { backgroundColor: bg, paddingTop: insets.top }]}>
 
       {/* Top nav */}
       <Animated.View style={[styles.topNav, animStyle(0)]}>
         <Pressable
           onPress={() => router.back()}
-          style={[styles.navBtn, { backgroundColor: t.navBtn, borderColor: t.navBtnBorder }]}
+          style={[styles.navBtn, { backgroundColor: navBtnBg, borderColor: navBtnBorder }]}
           hitSlop={8}
         >
-          <ChevLeft color={t.navBtnIcon} />
+          <ChevLeft color={navIconColor} />
         </Pressable>
 
-        {/* Progress dots — step 3 of 3 */}
-        <View style={styles.dotsRow}>
+        <View style={styles.dots}>
           {[false, false, true].map((active, i) => (
-            <View key={i} style={[styles.dot, { backgroundColor: active ? '#FF740D' : t.dotInactive, width: active ? 20 : 6 }]} />
+            <View
+              key={i}
+              style={[styles.dot, { width: active ? 20 : 6, backgroundColor: active ? '#FF740D' : dotInactive }]}
+            />
           ))}
         </View>
 
-        <View style={{ width: 38 }} />
+        <View style={styles.navPlaceholder} />
       </Animated.View>
 
       {/* Heading */}
       <Animated.View style={[styles.heading, animStyle(1)]}>
-        <Text style={[styles.headline, { color: t.headline }]}>Never miss a day.</Text>
-        <Text style={[styles.subtext, { color: t.subtext }]}>
+        <Text style={[styles.headline, { color: headlineColor }]}>Never miss a day.</Text>
+        <Text style={[styles.subtext, { color: subtextColor }]}>
           Set up reminders and keep your streak visible.
         </Text>
       </Animated.View>
 
       {/* Permission cards */}
-      <Animated.View style={[styles.cardsSection, animStyle(2)]}>
+      <Animated.View style={[styles.cards, animStyle(2)]}>
         <PermCard
           icon={<BellIcon color="#fff" size={19} />}
           title="Daily reminders"
@@ -290,7 +254,7 @@ export default function OnboardingStep3() {
           filled={true}
           allowed={notifAllowed}
           onAllow={() => setNotifAllowed(true)}
-          t={t}
+          isDark={isDark}
         />
         <PermCard
           icon={<PhoneIcon color="#fff" size={19} />}
@@ -300,27 +264,27 @@ export default function OnboardingStep3() {
           filled={false}
           allowed={widgetAllowed}
           onAllow={() => setWidgetAllowed(true)}
-          t={t}
+          isDark={isDark}
         />
       </Animated.View>
 
       {/* Widget preview */}
       <Animated.View style={animStyle(3)}>
-        <WidgetPreview t={t} />
+        <WidgetPreview isDark={isDark} />
       </Animated.View>
 
       <View style={{ flex: 1 }} />
 
       {/* CTA */}
-      <Animated.View style={[styles.ctaArea, { paddingBottom: insets.bottom + 12 }, animStyle(4)]}>
+      <Animated.View style={[styles.cta, { paddingBottom: insets.bottom + 12 }, animStyle(4)]}>
         <Pressable
           onPress={() => router.replace('/(tabs)')}
           style={({ pressed }) => [styles.ctaBtn, pressed && styles.ctaBtnPressed]}
         >
-          <Text style={styles.ctaBtnText}>All Done</Text>
+          <Text style={styles.ctaText}>All Done</Text>
           <ArrowRight size={18} />
         </Pressable>
-        <Text style={[styles.footerText, { color: t.footerText }]}>
+        <Text style={[styles.footerText, { color: footerColor }]}>
           You can change these in Settings anytime
         </Text>
       </Animated.View>
@@ -330,7 +294,10 @@ export default function OnboardingStep3() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, overflow: 'hidden' },
+  root: {
+    flex: 1,
+    overflow: 'hidden',
+  },
   topNav: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -339,30 +306,45 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   navBtn: {
-    width: 38, height: 38, borderRadius: 11,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     borderWidth: 1.5,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  dotsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dot: { height: 6, borderRadius: 99 },
+  navPlaceholder: {
+    width: 38,
+  },
+  dots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dot: {
+    height: 6,
+    borderRadius: 99,
+  },
   heading: {
     paddingHorizontal: 24,
     paddingTop: 22,
     alignItems: 'center',
-    gap: 8,
   },
   headline: {
     fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 28, lineHeight: 34,
+    fontSize: 28,
+    lineHeight: 34,
     letterSpacing: -0.3,
     textAlign: 'center',
   },
   subtext: {
     fontFamily: 'DMSans_400Regular',
-    fontSize: 15, lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: 'center',
+    marginTop: 8,
   },
-  cardsSection: {
+  cards: {
     marginHorizontal: 20,
     marginTop: 22,
     gap: 12,
@@ -371,84 +353,102 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    padding: 14,
     paddingHorizontal: 16,
+    paddingVertical: 14,
     borderRadius: 16,
     borderWidth: 1.5,
   },
   permIconCircle: {
-    width: 44, height: 44, borderRadius: 22,
-    alignItems: 'center', justifyContent: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     flexShrink: 0,
+    backgroundColor: '#FF740D',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  permText: { flex: 1, minWidth: 0 },
+  permText: {
+    flex: 1,
+    minWidth: 0,
+  },
   permTitle: {
     fontFamily: 'DMSans_700Bold',
-    fontSize: 15, lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 20,
   },
   permCaption: {
     fontFamily: 'DMSans_400Regular',
-    fontSize: 12.5, lineHeight: 18,
+    fontSize: 12.5,
+    lineHeight: 18,
     marginTop: 2,
   },
   checkCircle: {
-    width: 30, height: 30, borderRadius: 15,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    flexShrink: 0,
     backgroundColor: '#4CAF50',
-    alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  permBtn: {
-    height: 34, paddingHorizontal: 14,
+  allowBtn: {
+    height: 34,
+    paddingHorizontal: 14,
     borderRadius: 17,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
   },
-  permBtnText: {
+  allowBtnText: {
     fontFamily: 'DMSans_700Bold',
     fontSize: 13.5,
   },
-  widgetOuter: {
+  widgetWrap: {
     alignItems: 'center',
     marginTop: 20,
   },
-  widgetPhone: {
+  widgetOuter: {
     borderRadius: 22,
     padding: 16,
     width: 200,
     borderWidth: 1,
+  },
+  widgetShadow: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.10,
     shadowRadius: 20,
     elevation: 4,
   },
-  widgetHomeLabel: {
+  widgetLabel: {
     fontFamily: 'DMSans_500Medium',
-    fontSize: 11, letterSpacing: 0.3,
+    fontSize: 11,
     textAlign: 'center',
+    letterSpacing: 0.3,
     marginBottom: 10,
   },
   widgetInner: {
     borderRadius: 18,
     padding: 14,
-    paddingHorizontal: 16,
     borderWidth: 1.5,
   },
-  widgetTopRow: {
+  widgetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  widgetAppName: {
+  widgetBrand: {
     fontFamily: 'DMSans_700Bold',
-    fontSize: 10, color: '#FF740D',
-    letterSpacing: 0.5,
+    fontSize: 10,
+    color: '#FF740D',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   widgetHabitName: {
     fontFamily: 'DMSans_700Bold',
-    fontSize: 13, lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 16,
     marginBottom: 6,
   },
   widgetStreakRow: {
@@ -456,9 +456,10 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     gap: 4,
   },
-  widgetStreakCount: {
+  widgetStreakNum: {
     fontFamily: 'DMSans_700Bold',
-    fontSize: 28, lineHeight: 28,
+    fontSize: 28,
+    lineHeight: 28,
     color: '#FF740D',
   },
   widgetStreakLabel: {
@@ -480,21 +481,24 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 4,
   },
-  widgetDayLabel: {
+  widgetDayText: {
     fontFamily: 'DMSans_700Bold',
     fontSize: 7.5,
   },
-  ctaArea: {
+  cta: {
     paddingHorizontal: 24,
     alignItems: 'center',
     gap: 12,
   },
   ctaBtn: {
-    width: '100%', height: 54, borderRadius: 27,
-    backgroundColor: '#FF740D',
+    width: '100%',
+    height: 54,
+    borderRadius: 27,
     flexDirection: 'row',
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
+    backgroundColor: '#FF740D',
     shadowColor: '#FF6500',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -505,14 +509,15 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
     shadowOpacity: 0.12,
   },
-  ctaBtnText: {
+  ctaText: {
     fontFamily: 'DMSans_700Bold',
-    fontSize: 16, color: '#FFFFFF',
-    letterSpacing: 0.1,
+    fontSize: 16,
+    color: '#FFFFFF',
   },
   footerText: {
     fontFamily: 'DMSans_400Regular',
-    fontSize: 12.5, lineHeight: 18,
+    fontSize: 12.5,
+    lineHeight: 18,
     textAlign: 'center',
   },
 });
