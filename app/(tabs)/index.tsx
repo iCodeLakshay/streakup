@@ -7,12 +7,23 @@ import {
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { router } from 'expo-router';
 import {
   useHabitStore, getTodayDateString, getStreakCount,
-  type Habit, type Completion,
+  type Habit, type Completion, type Freeze,
 } from '@/stores/habitStore';
 import { HabitCard } from '@/components/HabitCard';
 import { AddHabitSheet } from '@/components/AddHabitSheet';
+import { useAuthStore } from '@/stores/authStore';
+import { useSettingsStore } from '@/stores/settingsStore';
+
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  if (h < 21) return 'Good evening';
+  return 'Good night';
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,11 +98,11 @@ function ProgressCard({
   doneCount: number; totalCount: number;
   progressAnim: Animated.Value; isDark: boolean;
 }) {
-  const cardBg = isDark ? '#2A2A2A' : '#FFF8F0';
-  const cardBorder = isDark ? '#383838' : 'rgba(255,116,13,0.14)';
-  const textColor = isDark ? '#F5F5F5' : '#1A1A1A';
-  const subColor = isDark ? '#666666' : '#A89F95';
-  const trackBg = isDark ? '#383838' : '#F0EDE8';
+  const cardBg = isDark ? '#333130' : '#EEECEA';
+  const cardBorder = isDark ? '#3A3835' : '#E8E5E0';
+  const textColor = isDark ? '#F5F3F0' : '#1F1D1B';
+  const subColor = isDark ? '#8A8780' : '#7A776F';
+  const trackBg = isDark ? '#3A3835' : '#E8E5E0';
   const allDone = doneCount === totalCount;
   const status = allDone ? 'All done! 🎉' : doneCount === 0 ? 'Start your first streak today 🔥' : 'Keep going!';
 
@@ -111,8 +122,8 @@ function ProgressCard({
 }
 
 function SectionDivider({ isDark }: { isDark: boolean }) {
-  const lineColor = isDark ? '#2A2A2A' : '#F0EDE8';
-  const textColor = isDark ? '#555555' : '#C5BFB8';
+  const lineColor = isDark ? '#3A3835' : '#E8E5E0';
+  const textColor = isDark ? '#6A6762' : '#B8B5AE';
   return (
     <View style={styles.divider}>
       <View style={[styles.dividerLine, { backgroundColor: lineColor }]} />
@@ -123,13 +134,13 @@ function SectionDivider({ isDark }: { isDark: boolean }) {
 }
 
 function ToastBanner({
-  habit, streakCount, translateY,
+  habit, streakCount, translateY, topOffset,
 }: {
-  habit: Habit | undefined; streakCount: number; translateY: Animated.Value;
+  habit: Habit | undefined; streakCount: number; translateY: Animated.Value; topOffset: number;
 }) {
   if (!habit) return null;
   return (
-    <Animated.View style={[styles.toast, { transform: [{ translateY }] }]}>
+    <Animated.View style={[styles.toast, { top: topOffset, transform: [{ translateY }] }]}>
       <View style={styles.toastFlame}>
         <FlameIcon size={18} />
       </View>
@@ -141,7 +152,7 @@ function ToastBanner({
   );
 }
 
-function CelebrationBanner({ habits, completions }: { habits: Habit[]; completions: Completion[] }) {
+function CelebrationBanner({ habits, completions, freezes }: { habits: Habit[]; completions: Completion[]; freezes: Freeze[] }) {
   return (
     <View style={styles.celebBanner}>
       <View style={styles.celebFlameCircle}>
@@ -153,7 +164,7 @@ function CelebrationBanner({ habits, completions }: { habits: Habit[]; completio
         {habits.map((h) => (
           <View key={h.id} style={styles.celebPill}>
             <Text style={styles.celebPillEmoji}>{h.emoji}</Text>
-            <Text style={styles.celebPillText}>{getStreakCount(h.id, completions)}d</Text>
+            <Text style={styles.celebPillText}>{getStreakCount(h.id, completions, freezes)}d</Text>
           </View>
         ))}
       </View>
@@ -172,6 +183,7 @@ export default function HomeScreen() {
 
   const habits = useHabitStore((s) => s.habits);
   const completions = useHabitStore((s) => s.completions);
+  const freezes = useHabitStore((s) => s.freezes);
   const addHabit = useHabitStore((s) => s.addHabit);
   const toggleCompletion = useHabitStore((s) => s.toggleCompletion);
 
@@ -279,26 +291,35 @@ export default function HomeScreen() {
 
   const renderItem: ListRenderItem<ListItem> = useCallback(({ item }) => {
     if (item.type === 'divider') return <SectionDivider isDark={isDark} />;
-    if (item.type === 'celebration') return <CelebrationBanner habits={habits} completions={completions} />;
+    if (item.type === 'celebration') return <CelebrationBanner habits={habits} completions={completions} freezes={freezes} />;
     const habitIdx = habits.findIndex((h) => h.id === item.habit.id);
     return (
       <HabitCard
         habit={item.habit}
         isCompleted={item.isCompleted}
-        streakCount={getStreakCount(item.habit.id, completions)}
+        streakCount={getStreakCount(item.habit.id, completions, freezes)}
         onToggle={() => handleToggle(item.habit.id)}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onPress={() => router.push({ pathname: '/habit/[id]', params: { id: item.habit.id } } as any)}
         entranceIndex={habitIdx}
         dimmed={item.dimmed}
       />
     );
   }, [habits, completions, isDark, handleToggle]);
 
-  const bg = isDark ? '#1A1A1A' : '#FFFFFF';
-  const headerNameColor = isDark ? '#F5F5F5' : '#1A1A1A';
-  const sectionLabelColor = isDark ? '#555555' : '#C5BFB8';
+  const { user }        = useAuthStore();
+  const { displayName } = useSettingsStore();
+
+  const userName   = displayName.trim() || user?.email?.split('@')[0] || '';
+  const greeting   = `${getGreeting()}${userName ? `, ${userName}` : ''} 👋`;
+  const initials   = userName ? userName.slice(0, 2).toUpperCase() : '👤';
+
+  const bg = isDark ? '#1F1D1B' : '#FAFAF8';
+  const headerNameColor = isDark ? '#F5F3F0' : '#1F1D1B';
+  const sectionLabelColor = isDark ? '#6A6762' : '#B8B5AE';
 
   const toastHabit = habits.find((h) => h.id === toastHabitId);
-  const toastStreak = toastHabitId ? getStreakCount(toastHabitId, completions) : 0;
+  const toastStreak = toastHabitId ? getStreakCount(toastHabitId, completions, freezes) : 0;
 
   return (
     <View style={[styles.root, { backgroundColor: bg }]}>
@@ -317,10 +338,10 @@ export default function HomeScreen() {
               TODAY — {totalCount} {totalCount === 1 ? 'HABIT' : 'HABITS'}
             </Text>
           )}
-          <Text style={[styles.greeting, { color: headerNameColor }]}>Good morning 👋</Text>
+          <Text style={[styles.greeting, { color: headerNameColor }]}>{greeting}</Text>
         </View>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>L</Text>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
       </Animated.View>
 
@@ -338,7 +359,7 @@ export default function HomeScreen() {
       />
 
       {/* Toast */}
-      <ToastBanner habit={toastHabit} streakCount={toastStreak} translateY={toastY} />
+      <ToastBanner habit={toastHabit} streakCount={toastStreak} translateY={toastY} topOffset={insets.top + 8} />
 
       {/* Confetti overlay */}
       <View style={[StyleSheet.absoluteFill, styles.confettiOverlay]} pointerEvents="none">
@@ -360,7 +381,7 @@ export default function HomeScreen() {
       </View>
 
       {/* FAB */}
-      <Animated.View style={[styles.fabWrap, { bottom: insets.bottom + 72, transform: [{ scale: fabScale }] }]}>
+      <Animated.View style={[styles.fabWrap, { bottom: insets.bottom + 58, transform: [{ scale: fabScale }] }]}>
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -368,7 +389,7 @@ export default function HomeScreen() {
           }}
           style={styles.fab}
         >
-          <PlusIcon size={26} />
+          <PlusIcon size={28} />
         </Pressable>
       </Animated.View>
 
@@ -445,29 +466,25 @@ const styles = StyleSheet.create({
   dividerText: { fontFamily: 'DMSans_500Medium', fontSize: 11 },
 
   toast: {
-    position: 'absolute', top: 0, left: 16, right: 16,
+    position: 'absolute', left: 16, right: 16,
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(255,116,13,0.18)',
-    padding: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.10, shadowRadius: 16, elevation: 6, zIndex: 100,
+    backgroundColor: '#F5F3F0',
+    borderRadius: 14, borderWidth: 1.5, borderColor: '#E8E5E0',
+    padding: 12, zIndex: 100,
   },
   toastFlame: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#FFF0E0',
+    backgroundColor: '#EEECEA',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   toastText: { flex: 1 },
-  toastName: { fontFamily: 'DMSans_700Bold', fontSize: 14, color: '#FF740D' },
-  toastStreak: { fontFamily: 'DMSans_400Regular', fontSize: 11.5, color: '#A89F95', marginTop: 1 },
+  toastName: { fontFamily: 'DMSans_700Bold', fontSize: 14, color: '#1F1D1B' },
+  toastStreak: { fontFamily: 'DMSans_400Regular', fontSize: 11.5, color: '#7A776F', marginTop: 1 },
 
   celebBanner: {
     marginHorizontal: 20, marginTop: 16, marginBottom: 8,
     borderRadius: 20, backgroundColor: '#FF740D',
     padding: 20, alignItems: 'center', gap: 8,
-    shadowColor: '#FF6500', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.30, shadowRadius: 12, elevation: 6,
   },
   celebFlameCircle: {
     width: 52, height: 52, borderRadius: 26,
@@ -493,9 +510,7 @@ const styles = StyleSheet.create({
 
   fabWrap: { position: 'absolute', right: 20 },
   fab: {
-    width: 56, height: 56, borderRadius: 28, backgroundColor: '#FF740D',
+    width: 62, height: 62, borderRadius: 31, backgroundColor: '#FF740D',
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#FF6500', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.50, shadowRadius: 10, elevation: 6,
   },
 });

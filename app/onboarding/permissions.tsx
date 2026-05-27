@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '@/stores/authStore';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated, Easing, StyleSheet, Pressable, View, Text,
@@ -175,6 +176,7 @@ function WidgetPreview({ isDark }: { isDark: boolean }) {
 
 export default function PermissionsScreen() {
   const router = useRouter();
+  const { completeOnboarding } = useAuthStore();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -278,7 +280,7 @@ export default function PermissionsScreen() {
       {/* CTA */}
       <Animated.View style={[styles.cta, { paddingBottom: insets.bottom + 12 }, animStyle(4)]}>
         <Pressable
-          onPress={() => router.replace('/(tabs)')}
+          onPress={async () => { await completeOnboarding(); router.replace('/(tabs)' as any); }}
           style={({ pressed }) => [styles.ctaBtn, pressed && styles.ctaBtnPressed]}
         >
           <Text style={styles.ctaText}>All Done</Text>

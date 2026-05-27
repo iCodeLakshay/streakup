@@ -4,6 +4,7 @@ import { Animated, Easing, GestureResponderEvent, Pressable, StyleSheet, Text, V
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, RadialGradient, Stop } from 'react-native-svg';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuthStore } from '@/stores/authStore';
 
 const SLIDES = [
   {
@@ -63,6 +64,7 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isDark = useColorScheme() === 'dark';
+  const { completeOnboarding } = useAuthStore();
 
   // ── Slide state ──────────────────────────────────────────────────────────
   const [activeIdx, setActiveIdx] = useState(0);
@@ -185,7 +187,7 @@ export default function OnboardingScreen() {
 
       {/* Skip */}
       <Animated.View style={[styles.skipWrap, anim(0)]}>
-        <Pressable onPress={() => router.replace('/(tabs)')} hitSlop={12} style={styles.skipBtn}>
+        <Pressable onPress={async () => { await completeOnboarding(); router.replace('/(tabs)' as any); }} hitSlop={12} style={styles.skipBtn}>
           {({ pressed }) => (
             <Text style={[styles.skipText, { opacity: pressed ? 0.5 : 1 }]}>Skip</Text>
           )}

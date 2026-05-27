@@ -10,6 +10,7 @@ interface HabitCardProps {
   isCompleted: boolean;
   streakCount: number;
   onToggle: () => void;
+  onPress?: () => void;
   entranceIndex: number;
   dimmed?: boolean;
 }
@@ -31,6 +32,7 @@ export function HabitCard({
   isCompleted,
   streakCount,
   onToggle,
+  onPress,
   entranceIndex,
   dimmed = false,
 }: HabitCardProps) {
@@ -72,13 +74,20 @@ export function HabitCard({
     onToggle();
   };
 
-  const cardBg = isCompleted ? '#F0FFF4' : (isDark ? '#2A2A2A' : '#FFF8F0');
-  const cardBorder = isCompleted ? '#22C55E' : (isDark ? '#383838' : 'rgba(255,116,13,0.14)');
-  const leftBarColor = isCompleted ? '#22C55E' : 'transparent';
-  const nameColor = isDark ? '#F5F5F5' : '#1A1A1A';
-  const streakColor = streakCount > 0 ? '#FF740D' : '#C5BFB8';
-  const flameColor = streakCount > 0 ? '#FF740D' : '#C5BFB8';
-  const emojiBg = isCompleted ? '#D1FAE5' : (isDark ? 'rgba(255,116,13,0.15)' : '#FFF3E0');
+  const isZero = streakCount === 0;
+
+  const cardBg = isCompleted
+    ? (isDark ? '#1A3A28' : '#F0FFF4')
+    : (isDark ? '#2A2826' : '#F5F3F0');
+  const cardBorder = isCompleted
+    ? (isDark ? '#2A5A3D' : '#A7F3D0')
+    : (isDark ? '#3A3835' : '#E8E5E0');
+  const nameColor = isDark ? '#F5F3F0' : '#1F1D1B';
+  const streakColor = isDark ? '#8A8780' : '#7A776F';
+  const flameColor = isZero ? '#B8B5AE' : '#FF740D';
+  const emojiBg = isCompleted
+    ? (isDark ? '#0F2820' : '#D1FAE5')
+    : (isDark ? '#333130' : '#EEECEA');
 
   return (
     <Animated.View
@@ -88,11 +97,18 @@ export function HabitCard({
         { transform: [{ translateY: entranceY }] },
       ]}
     >
-      {/* Green left accent bar for completed */}
-      <View style={[styles.leftBar, { backgroundColor: leftBarColor }]} />
-
-      {/* Card body */}
-      <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.card,
+          {
+            backgroundColor: cardBg,
+            borderColor: cardBorder,
+            opacity: pressed ? 0.88 : isZero ? 0.65 : 1,
+          },
+        ]}
+        onPress={onPress}
+        android_ripple={{ color: 'rgba(0,0,0,0.04)', borderless: false }}
+      >
         {/* Emoji badge */}
         <View style={[styles.emojiBadge, { backgroundColor: emojiBg }]}>
           <Text style={styles.emojiText}>{habit.emoji}</Text>
@@ -133,25 +149,17 @@ export function HabitCard({
             )}
           </Animated.View>
         </Pressable>
-      </View>
+      </Pressable>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   cardWrap: {
-    flexDirection: 'row',
     marginBottom: 10,
     marginHorizontal: 20,
   },
-  leftBar: {
-    width: 4,
-    borderRadius: 4,
-    marginRight: -2,
-    zIndex: 1,
-  },
   card: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 16,

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Animated, Easing, Modal, Pressable, ScrollView,
-  StyleSheet, Text, TextInput, View,
+  Animated, Easing, KeyboardAvoidingView, Modal, Platform,
+  Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -20,13 +20,20 @@ const COLOR_SWATCHES = [
 interface AddHabitSheetProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (h: Omit<Habit, 'id' | 'createdAt'>) => void;
+  // Add mode
+  onAdd?: (h: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  // Edit mode — provide habitToEdit to switch into edit mode
+  habitToEdit?: Habit;
+  onSave?: (id: string, updates: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>) => void;
 }
 
-export function AddHabitSheet({ visible, onClose, onAdd }: AddHabitSheetProps) {
+export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: AddHabitSheetProps) {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  const isEditMode = !!habitToEdit;
 
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🔥');
@@ -35,6 +42,20 @@ export function AddHabitSheet({ visible, onClose, onAdd }: AddHabitSheetProps) {
 
   const slideY = useRef(new Animated.Value(700)).current;
   const bgOpacity = useRef(new Animated.Value(0)).current;
+
+  // Pre-fill or reset form when sheet opens or habitToEdit changes
+  useEffect(() => {
+    if (visible) {
+      if (habitToEdit) {
+        setName(habitToEdit.name);
+        setEmoji(habitToEdit.emoji);
+        setColor(habitToEdit.color);
+        setNote(habitToEdit.note ?? '');
+      } else {
+        setName(''); setNote(''); setEmoji('🔥'); setColor('#FF740D');
+      }
+    }
+  }, [visible, habitToEdit]);
 
   useEffect(() => {
     if (visible) {
@@ -58,49 +79,60 @@ export function AddHabitSheet({ visible, onClose, onAdd }: AddHabitSheetProps) {
     }
   }, [visible]);
 
-  const canAdd = name.trim().length > 0;
+  const canSubmit = name.trim().length > 0;
 
-  const handleAdd = () => {
-    if (!canAdd) return;
-    onAdd({ name: name.trim(), emoji, color, note: note.trim() || null });
-    setName(''); setNote(''); setEmoji('🔥'); setColor('#FF740D');
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    const payload = { name: name.trim(), emoji, color, note: note.trim() || null };
+    if (isEditMode && habitToEdit && onSave) {
+      onSave(habitToEdit.id, payload);
+    } else if (!isEditMode && onAdd) {
+      onAdd(payload);
+    }
     onClose();
   };
 
-  const sheetBg = isDark ? '#1C1C1E' : '#FFFFFF';
-  const handleBg = isDark ? '#48484A' : '#D1D1D6';
-  const labelColor = isDark ? '#F5F5F5' : '#1A1A1A';
-  const subLabelColor = isDark ? '#999999' : '#C5BFB8';
-  const inputBg = isDark ? '#2C2C2E' : '#F8F6F3';
-  const inputBorder = isDark ? '#383838' : '#F0EDE8';
-  const inputText = isDark ? '#F5F5F5' : '#1A1A1A';
-  const placeholderColor = isDark ? '#636366' : '#C5BFB8';
-  const closeBtnBg = isDark ? '#3A3A3C' : '#F0F0F0';
-  const ctaDisabledBg = isDark ? '#2C2C2E' : '#F0EDE8';
-  const ctaDisabledText = isDark ? '#636366' : '#C5BFB8';
+  // ── Colors ────────────────────────────────────────────────────────────────
+  const sheetBg       = isDark ? '#1C1C1E' : '#FFFFFF';
+  const handleBg      = isDark ? '#48484A' : '#D1D1D6';
+  const labelColor    = isDark ? '#F5F5F5' : '#1A1A1A';
+  const subLabelColor = isDark ? '#999999' : '#B8B5AE';
+  const inputBg       = isDark ? '#2C2C2E' : '#F5F3F0';
+  const inputBorder   = isDark ? '#3A3835' : '#E8E5E0';
+  const inputText     = isDark ? '#F5F5F5' : '#1F1D1B';
+  const placeholder   = isDark ? '#636366' : '#B8B5AE';
+  const closeBtnBg    = isDark ? '#3A3A3C' : '#F0F0F0';
+  const ctaDisabledBg = isDark ? '#2C2C2E' : '#EEECEA';
+  const ctaDisabledTx = isDark ? '#636366' : '#B8B5AE';
 
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
-      <View style={styles.modalRoot}>
-        {/* Backdrop */}
-        <Animated.View style={[styles.backdrop, { opacity: bgOpacity }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        </Animated.View>
 
-        {/* Sheet panel */}
+      {/* Backdrop */}
+      <Animated.View style={[styles.backdrop, { opacity: bgOpacity }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      </Animated.View>
+
+      {/* KAV wraps only the sheet */}
+      <KeyboardAvoidingView
+        style={styles.kavContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
         <Animated.View
           style={[
             styles.sheet,
-            { backgroundColor: sheetBg, paddingBottom: insets.bottom + 20 },
+            { backgroundColor: sheetBg, maxHeight: windowHeight * 0.92 },
             { transform: [{ translateY: slideY }] },
           ]}
         >
-          {/* Handle */}
           <View style={[styles.handle, { backgroundColor: handleBg }]} />
 
           {/* Header */}
           <View style={styles.sheetHeader}>
-            <Text style={[styles.sheetTitle, { color: labelColor }]}>New Habit</Text>
+            <Text style={[styles.sheetTitle, { color: labelColor }]}>
+              {isEditMode ? 'Edit Habit' : 'New Habit'}
+            </Text>
             <Pressable
               onPress={onClose}
               style={[styles.closeBtn, { backgroundColor: closeBtnBg }]}
@@ -110,99 +142,107 @@ export function AddHabitSheet({ visible, onClose, onAdd }: AddHabitSheetProps) {
             </Pressable>
           </View>
 
-          {/* Emoji picker */}
-          <Text style={[styles.sectionLabel, { color: subLabelColor }]}>ICON</Text>
+          {/* Scrollable form body */}
           <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.emojiScroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.scrollBody, { paddingBottom: insets.bottom + 24 }]}
           >
-            {EMOJI_PRESETS.map((e) => (
-              <Pressable
-                key={e}
-                onPress={() => setEmoji(e)}
-                style={[
-                  styles.emojiBtn,
-                  {
-                    backgroundColor: emoji === e ? (isDark ? 'rgba(255,116,13,0.2)' : '#FFF3E0') : inputBg,
-                    borderColor: emoji === e ? '#FF740D' : inputBorder,
-                  },
-                ]}
-              >
-                <Text style={styles.emojiBtnText}>{e}</Text>
-              </Pressable>
-            ))}
+
+            {/* Emoji picker */}
+            <Text style={[styles.sectionLabel, { color: subLabelColor }]}>ICON</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.emojiScroll}
+            >
+              {EMOJI_PRESETS.map((e) => (
+                <Pressable
+                  key={e}
+                  onPress={() => setEmoji(e)}
+                  style={[
+                    styles.emojiBtn,
+                    {
+                      backgroundColor: emoji === e ? (isDark ? 'rgba(255,116,13,0.2)' : '#FFF3E0') : inputBg,
+                      borderColor: emoji === e ? '#FF740D' : inputBorder,
+                    },
+                  ]}
+                >
+                  <Text style={styles.emojiBtnText}>{e}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            {/* Habit name */}
+            <Text style={[styles.sectionLabel, { color: subLabelColor, marginTop: 20 }]}>NAME</Text>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="Habit name"
+              placeholderTextColor={placeholder}
+              maxLength={40}
+              style={[styles.nameInput, { backgroundColor: inputBg, borderColor: inputBorder, color: inputText }]}
+              returnKeyType="next"
+            />
+
+            {/* Note */}
+            <Text style={[styles.sectionLabel, { color: subLabelColor, marginTop: 16 }]}>NOTE (optional)</Text>
+            <TextInput
+              value={note}
+              onChangeText={setNote}
+              placeholder="Add a note..."
+              placeholderTextColor={placeholder}
+              style={[styles.noteInput, { backgroundColor: inputBg, borderColor: inputBorder, color: inputText }]}
+              multiline
+              returnKeyType="done"
+              blurOnSubmit
+            />
+
+            {/* Color swatches */}
+            <Text style={[styles.sectionLabel, { color: subLabelColor, marginTop: 20 }]}>COLOUR</Text>
+            <View style={styles.swatchRow}>
+              {COLOR_SWATCHES.map((c) => (
+                <Pressable
+                  key={c}
+                  onPress={() => setColor(c)}
+                  style={[styles.swatchRing, { borderColor: color === c ? c : 'transparent' }]}
+                >
+                  <View style={[styles.swatch, { backgroundColor: c }]} />
+                </Pressable>
+              ))}
+            </View>
+
+            {/* CTA */}
+            <Pressable
+              onPress={handleSubmit}
+              disabled={!canSubmit}
+              style={({ pressed }) => [
+                styles.ctaBtn,
+                { backgroundColor: canSubmit ? '#FF740D' : ctaDisabledBg },
+                pressed && canSubmit && { opacity: 0.88 },
+              ]}
+            >
+              <Text style={[styles.ctaText, { color: canSubmit ? '#FFFFFF' : ctaDisabledTx }]}>
+                {isEditMode ? 'Save Changes' : 'Add Habit'}
+              </Text>
+            </Pressable>
+
           </ScrollView>
-
-          {/* Habit name */}
-          <Text style={[styles.sectionLabel, { color: subLabelColor, marginTop: 16 }]}>NAME</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Habit name"
-            placeholderTextColor={placeholderColor}
-            maxLength={40}
-            style={[styles.nameInput, { backgroundColor: inputBg, borderColor: inputBorder, color: inputText }]}
-            autoFocus={false}
-          />
-
-          {/* Note */}
-          <Text style={[styles.sectionLabel, { color: subLabelColor, marginTop: 12 }]}>NOTE (optional)</Text>
-          <TextInput
-            value={note}
-            onChangeText={setNote}
-            placeholder="Add a note..."
-            placeholderTextColor={placeholderColor}
-            style={[styles.noteInput, { backgroundColor: inputBg, borderColor: inputBorder, color: inputText }]}
-            multiline
-          />
-
-          {/* Color swatches */}
-          <Text style={[styles.sectionLabel, { color: subLabelColor, marginTop: 16 }]}>COLOUR</Text>
-          <View style={styles.swatchRow}>
-            {COLOR_SWATCHES.map((c) => (
-              <Pressable
-                key={c}
-                onPress={() => setColor(c)}
-                style={[
-                  styles.swatchRing,
-                  { borderColor: color === c ? c : 'transparent' },
-                ]}
-              >
-                <View style={[styles.swatch, { backgroundColor: c }]} />
-              </Pressable>
-            ))}
-          </View>
-
-          {/* CTA */}
-          <Pressable
-            onPress={handleAdd}
-            disabled={!canAdd}
-            style={({ pressed }) => [
-              styles.ctaBtn,
-              { backgroundColor: canAdd ? '#FF740D' : ctaDisabledBg },
-              canAdd && styles.ctaBtnShadow,
-              pressed && canAdd && { transform: [{ scale: 0.97 }] },
-            ]}
-          >
-            <Text style={[styles.ctaText, { color: canAdd ? '#FFFFFF' : ctaDisabledText }]}>
-              Add Habit
-            </Text>
-          </Pressable>
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalRoot: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  kavContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   sheet: {
     borderTopLeftRadius: 28,
@@ -234,6 +274,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  scrollBody: { flexGrow: 1 },
   sectionLabel: {
     fontFamily: 'DMSans_700Bold',
     fontSize: 11,
@@ -253,9 +294,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emojiBtnText: {
-    fontSize: 22,
-  },
+  emojiBtnText: { fontSize: 22 },
   nameInput: {
     borderRadius: 12,
     borderWidth: 1.5,
@@ -271,7 +310,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontFamily: 'DMSans_400Regular',
     fontSize: 14,
-    minHeight: 60,
+    minHeight: 72,
     textAlignVertical: 'top',
   },
   swatchRow: {
@@ -298,13 +337,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  ctaBtnShadow: {
-    shadowColor: '#FF6500',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
   },
   ctaText: {
     fontFamily: 'DMSans_700Bold',
