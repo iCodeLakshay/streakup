@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -32,14 +33,26 @@ function PencilIcon({ color }: { color: string }) {
   );
 }
 
+function CameraIcon({ color }: { color: string }) {
+  return (
+    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+        stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+      />
+      <Path d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const isDark = useColorScheme() === 'dark';
 
-  const { user }       = useAuthStore();
-  const { displayName } = useSettingsStore();
+  const { user }                        = useAuthStore();
+  const { displayName, avatarUri, setAvatarUri } = useSettingsStore();
   const habits          = useHabitStore((s) => s.habits);
   const completions     = useHabitStore((s) => s.completions);
 
@@ -70,8 +83,22 @@ export default function ProfileScreen() {
   const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const thisMonthCount = completions.filter((c) => c.date.startsWith(monthPrefix)).length;
 
-  // Initials for avatar
+  // Initials for avatar fallback
   const initials = name.slice(0, 2).toUpperCase();
+
+  const pickAvatar = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      await setAvatarUri(result.assets[0].uri);
+    }
+  };
 
   return (
     <View style={[styles.root, { backgroundColor: bg }]}>
@@ -80,7 +107,7 @@ export default function ProfileScreen() {
       <View style={[styles.navBar, { paddingTop: insets.top + 10, backgroundColor: bg, borderBottomColor: isDark ? '#3A3835' : '#F0EDE8' }]}>
         <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={8}>
           <BackChevron color={textSec} />
-          <Text style={[styles.backLabel, { color: textSec }]}>Settings</Text>
+          <Text style={[styles.backLabel, { color: textSec }]}>Back</Text>
         </Pressable>
         <Text style={[styles.navTitle, { color: textPri }]}>Profile</Text>
         <Pressable
@@ -99,9 +126,17 @@ export default function ProfileScreen() {
 
         {/* Avatar + name hero */}
         <View style={[styles.hero, { backgroundColor: surface2, borderColor: isDark ? '#3A3835' : '#E8E5E0' }]}>
-          <View style={[styles.avatarCircle, { backgroundColor: surface1, borderColor: border }]}>
-            <Text style={[styles.avatarInitials, { color: textPri }]}>{initials}</Text>
-          </View>
+          <Pressable onPress={pickAvatar} style={styles.avatarWrap}>
+            <View style={[styles.avatarCircle, { backgroundColor: surface1, borderColor: border }]}>
+              {avatarUri
+                ? <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                : <Text style={[styles.avatarInitials, { color: textPri }]}>{initials}</Text>
+              }
+            </View>
+            <View style={[styles.cameraBtn, { backgroundColor: '#FF740D' }]}>
+              <CameraIcon color="#FFFFFF" />
+            </View>
+          </Pressable>
           <Text style={[styles.heroName, { color: textPri }]}>{name}</Text>
           <Text style={[styles.heroEmail, { color: textSec }]}>{user?.email ?? ''}</Text>
           {memberSince && (
@@ -223,6 +258,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     gap: 6,
   },
+  avatarWrap: {
+    marginBottom: 8,
+    position: 'relative',
+  },
   avatarCircle: {
     width: 80,
     height: 80,
@@ -230,12 +269,29 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   avatarInitials: {
     fontFamily: 'DMSans_700Bold',
     fontSize: 28,
     lineHeight: 34,
+  },
+  cameraBtn: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   heroName: {
     fontFamily: 'DMSans_700Bold',

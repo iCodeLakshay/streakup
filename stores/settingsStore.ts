@@ -7,6 +7,7 @@ const DNAME_KEY           = '@streakup/display-name';
 const LAST_SYNC_KEY       = '@streakup/last-sync-at';
 const FREEZE_COUNT_KEY    = '@streakup/freeze-count';
 const FREEZE_REPLENISH_KEY = '@streakup/freeze-replenish';
+const AVATAR_KEY          = '@streakup/avatar-uri';
 
 const MAX_FREEZES = 3;
 
@@ -16,6 +17,7 @@ interface SettingsStore {
   themeMode: ThemeMode;
   notificationsEnabled: boolean;
   displayName: string;
+  avatarUri: string | null;
   lastSyncAt: string | null;
   freezeCount: number;
   lastFreezeReplenish: string | null;
@@ -24,6 +26,7 @@ interface SettingsStore {
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   setNotificationsEnabled: (enabled: boolean) => Promise<void>;
   setDisplayName: (name: string) => Promise<void>;
+  setAvatarUri: (uri: string | null) => Promise<void>;
   setLastSyncAt: (ts: string) => void;
   consumeFreeze: () => boolean;
 }
@@ -41,6 +44,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   themeMode: 'system',
   notificationsEnabled: true,
   displayName: '',
+  avatarUri: null,
   lastSyncAt: null,
   freezeCount: MAX_FREEZES,
   lastFreezeReplenish: null,
@@ -48,10 +52,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   hydrate: async () => {
     try {
-      const [theme, notifs, name, lastSync, freezeRaw, replenishRaw] = await Promise.all([
+      const [theme, notifs, name, avatar, lastSync, freezeRaw, replenishRaw] = await Promise.all([
         AsyncStorage.getItem(THEME_KEY),
         AsyncStorage.getItem(NOTIFS_KEY),
         AsyncStorage.getItem(DNAME_KEY),
+        AsyncStorage.getItem(AVATAR_KEY),
         AsyncStorage.getItem(LAST_SYNC_KEY),
         AsyncStorage.getItem(FREEZE_COUNT_KEY),
         AsyncStorage.getItem(FREEZE_REPLENISH_KEY),
@@ -75,6 +80,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         themeMode: (theme as ThemeMode | null) ?? 'system',
         notificationsEnabled: notifs !== 'false',
         displayName: name ?? '',
+        avatarUri: avatar,
         lastSyncAt: lastSync,
         freezeCount,
         lastFreezeReplenish,
@@ -98,6 +104,15 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   setDisplayName: async (name) => {
     set({ displayName: name });
     await AsyncStorage.setItem(DNAME_KEY, name);
+  },
+
+  setAvatarUri: async (uri) => {
+    set({ avatarUri: uri });
+    if (uri) {
+      await AsyncStorage.setItem(AVATAR_KEY, uri);
+    } else {
+      await AsyncStorage.removeItem(AVATAR_KEY);
+    }
   },
 
   setLastSyncAt: (ts) => {

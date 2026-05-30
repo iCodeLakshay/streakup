@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated, Easing, FlatList, ListRenderItem, Pressable,
+  Animated, Easing, FlatList, Image, ListRenderItem, Pressable,
   StyleSheet, Text, View,
 } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
@@ -307,8 +307,8 @@ export default function HomeScreen() {
     );
   }, [habits, completions, isDark, handleToggle]);
 
-  const { user }        = useAuthStore();
-  const { displayName } = useSettingsStore();
+  const { user }                    = useAuthStore();
+  const { displayName, avatarUri }  = useSettingsStore();
 
   const userName   = displayName.trim() || user?.email?.split('@')[0] || '';
   const greeting   = `${getGreeting()}${userName ? `, ${userName}` : ''} 👋`;
@@ -340,9 +340,12 @@ export default function HomeScreen() {
           )}
           <Text style={[styles.greeting, { color: headerNameColor }]}>{greeting}</Text>
         </View>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+        <Pressable style={styles.avatar} onPress={() => router.push('/profile' as any)} hitSlop={6}>
+          {avatarUri
+            ? <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+            : <Text style={styles.avatarText}>{initials}</Text>
+          }
+        </Pressable>
       </Animated.View>
 
       {/* List */}
@@ -426,9 +429,13 @@ const styles = StyleSheet.create({
     width: 42, height: 42, borderRadius: 21,
     backgroundColor: '#FF740D',
     alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
   },
   avatarText: {
     fontFamily: 'DMSans_700Bold', fontSize: 16, color: '#FFFFFF',
+  },
+  avatarImage: {
+    width: 42, height: 42, borderRadius: 21,
   },
 
   listContent: { paddingTop: 4, flexGrow: 1 },
