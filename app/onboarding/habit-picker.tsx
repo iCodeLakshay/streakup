@@ -5,41 +5,19 @@ import {
   Pressable, ScrollView, View, Text,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Rect, Ellipse } from 'react-native-svg';
+import EmojiKeyboard from 'rn-emoji-keyboard';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useHabitStore } from '@/stores/habitStore';
 
-type IconName = 'run' | 'drop' | 'book' | 'lotus' | 'dumbbell' | 'salad' | 'moon' | 'pen' | 'chevLeft' | 'close';
-
-function Icon({ name, size = 20, color = '#FF8C00', strokeWidth = 1.8 }: {
-  name: IconName; size?: number; color?: string; strokeWidth?: number;
-}) {
-  const p = {
-    width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
-    stroke: color, strokeWidth, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
-  };
-  switch (name) {
-    case 'run':      return <Svg {...p}><Path d="M13 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0"/><Path d="M7.5 17.5 10 13l3 2 2-5.5"/><Path d="M5 10.5c2-1.5 4-.5 5.5 0s3.5.5 5-1"/></Svg>;
-    case 'drop':     return <Svg {...p}><Path d="M12 3C12 3 6 9.5 6 14a6 6 0 0 0 12 0c0-4.5-6-11-6-11z"/></Svg>;
-    case 'book':     return <Svg {...p}><Path d="M4 19V5a2 2 0 0 1 2-2h12v14"/><Path d="M4 19a2 2 0 0 0 2 2h12"/><Path d="M9 7h6M9 11h4"/></Svg>;
-    case 'lotus':    return <Svg {...p}><Path d="M12 17c0-4-3-7-7-5 0 3 3 5 7 5z"/><Path d="M12 17c0-4 3-7 7-5 0 3-3 5-7 5z"/><Path d="M12 17V9"/><Path d="M12 9c0-3-2-5-5-4 0 2 2 4 5 4z"/><Path d="M12 9c0-3 2-5 5-4 0 2-2 4-5 4z"/></Svg>;
-    case 'dumbbell': return <Svg {...p}><Path d="M6 9h12M6 15h12"/><Rect x="3" y="7" width="3" height="10" rx="1.5"/><Rect x="18" y="7" width="3" height="10" rx="1.5"/><Rect x="7" y="11" width="2" height="2" rx="1"/><Rect x="15" y="11" width="2" height="2" rx="1"/></Svg>;
-    case 'salad':    return <Svg {...p}><Ellipse cx="12" cy="13" rx="9" ry="5"/><Path d="M12 13V8"/><Path d="M8 9c1-2 4-3 6-1"/><Path d="M16 9c-1-2-4-3-6-1"/></Svg>;
-    case 'moon':     return <Svg {...p}><Path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></Svg>;
-    case 'pen':      return <Svg {...p}><Path d="M12 20h9"/><Path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></Svg>;
-    case 'chevLeft': return <Svg {...p}><Path d="M15 18l-6-6 6-6"/></Svg>;
-    case 'close':    return <Svg {...p} strokeWidth={2.2}><Path d="M18 6L6 18M6 6l12 12"/></Svg>;
-  }
-}
-
-const HABITS: { key: IconName; label: string; note: string }[] = [
-  { key: 'run',      label: 'Morning Run',  note: 'Start the day strong' },
-  { key: 'drop',     label: 'Hydrate',      note: '8 glasses a day' },
-  { key: 'book',     label: 'Read',         note: '20 pages minimum' },
-  { key: 'lotus',    label: 'Meditate',     note: '10 minutes, eyes closed' },
-  { key: 'dumbbell', label: 'Exercise',     note: 'Move every day' },
-  { key: 'salad',    label: 'Eat clean',    note: 'No junk food' },
-  { key: 'moon',     label: 'Sleep early',  note: 'Lights out by 10pm' },
-  { key: 'pen',      label: 'Journal',      note: 'Write it out' },
+const HABITS = [
+  { emoji: '🏃', label: 'Morning Run',  note: 'Start the day strong' },
+  { emoji: '💧', label: 'Hydrate',      note: '8 glasses a day' },
+  { emoji: '📚', label: 'Read',         note: '20 pages minimum' },
+  { emoji: '🧘', label: 'Meditate',     note: '10 minutes, eyes closed' },
+  { emoji: '💪', label: 'Exercise',     note: 'Move every day' },
+  { emoji: '🥗', label: 'Eat clean',    note: 'No junk food' },
+  { emoji: '😴', label: 'Sleep early',  note: 'Lights out by 10pm' },
+  { emoji: '✍️', label: 'Journal',      note: 'Write it out' },
 ];
 
 export default function HabitPickerScreen() {
@@ -47,10 +25,12 @@ export default function HabitPickerScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const addHabit = useHabitStore((s) => s.addHabit);
 
   const [habitName, setHabitName] = useState('Morning Run');
   const [note, setNote] = useState('Start the day strong');
-  const [selectedKey, setSelectedKey] = useState<IconName>('run');
+  const [selectedEmoji, setSelectedEmoji] = useState('🏃');
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
   const fadeAnims = useRef([0, 1, 2, 3, 4].map(() => new Animated.Value(0))).current;
   const slideAnims = useRef([0, 1, 2, 3, 4].map(() => new Animated.Value(10))).current;
@@ -73,13 +53,23 @@ export default function HabitPickerScreen() {
   });
 
   const handleSelect = (h: typeof HABITS[0]) => {
-    setSelectedKey(h.key);
+    setSelectedEmoji(h.emoji);
     setHabitName(h.label);
     setNote(h.note);
   };
 
   const canCreate = habitName.trim().length > 0;
-  const selectedHabit = HABITS.find(h => h.key === selectedKey);
+
+  const handleCreate = async () => {
+    if (!canCreate) return;
+    await addHabit({
+      name: habitName.trim(),
+      emoji: selectedEmoji,
+      color: '#FF740D',
+      note: note.trim(),
+    });
+    router.push('/onboarding/permissions' as any);
+  };
 
   // Theme tokens
   const bg = isDark ? '#1A1A1A' : '#FFFFFF';
@@ -90,15 +80,12 @@ export default function HabitPickerScreen() {
   const subtextColor = isDark ? '#666666' : '#A89F95';
   const navBtnBg = isDark ? '#2A2A2A' : '#FAFAFA';
   const navBtnBorder = isDark ? '#333333' : '#EBEBEB';
-  const navIconColor = isDark ? '#F5F5F5' : '#1A1A1A';
   const inputNameColor = isDark ? '#F5F5F5' : '#1A1A1A';
   const noteColor = isDark ? '#777777' : '#888888';
   const placeholderColor = isDark ? '#555555' : '#C5BFB8';
   const clearBtnBg = isDark ? '#444444' : '#E8E4DF';
   const clearIconColor = isDark ? '#AAAAAA' : '#888888';
   const dotInactive = isDark ? '#333333' : '#E8E4DF';
-  const iconBadgeBg = isDark ? 'rgba(255,140,0,0.15)' : '#FFF3E0';
-  const iconBadgeBorder = isDark ? 'rgba(255,140,0,0.35)' : '#FFD49A';
   const iconBtnBg = isDark ? '#333333' : '#FAFAF8';
   const iconBtnBorder = isDark ? '#383838' : '#EEEBE6';
   const chipBg = isDark ? '#333333' : '#FAFAF8';
@@ -107,6 +94,7 @@ export default function HabitPickerScreen() {
   const ctaDisabledBg = isDark ? '#2A2A2A' : '#F0EDE8';
   const ctaDisabledText = isDark ? '#555555' : '#C5BFB8';
   const quickPicksLabel = isDark ? '#555555' : '#C5BFB8';
+  const navIconColor = isDark ? '#F5F5F5' : '#1A1A1A';
 
   return (
     <View style={[styles.root, { backgroundColor: bg, paddingTop: insets.top }]}>
@@ -114,11 +102,11 @@ export default function HabitPickerScreen() {
       {/* Top nav */}
       <Animated.View style={[styles.topNav, animStyle(0)]}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.replace('/onboarding' as any)}
           style={[styles.navBtn, { backgroundColor: navBtnBg, borderColor: navBtnBorder }]}
           hitSlop={8}
         >
-          <Icon name="chevLeft" size={18} color={navIconColor} />
+          <Text style={[styles.chevron, { color: navIconColor }]}>‹</Text>
         </Pressable>
 
         <View style={styles.dots}>
@@ -148,11 +136,9 @@ export default function HabitPickerScreen() {
       {/* Input card */}
       <Animated.View style={[styles.inputCard, animStyle(2)]}>
         <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-          {/* Icon + name row */}
+          {/* Emoji + name row */}
           <View style={[styles.cardRow, { borderBottomColor: cardDivider }]}>
-            <View style={[styles.iconBadge, { backgroundColor: iconBadgeBg, borderColor: iconBadgeBorder }]}>
-              <Icon name={selectedHabit?.key ?? 'run'} size={19} color="#FF8C00" />
-            </View>
+            <Text style={styles.emojiBadge}>{selectedEmoji}</Text>
             <TextInput
               value={habitName}
               onChangeText={setHabitName}
@@ -167,7 +153,7 @@ export default function HabitPickerScreen() {
                 style={[styles.clearBtn, { backgroundColor: clearBtnBg }]}
                 hitSlop={8}
               >
-                <Icon name="close" size={10} color={clearIconColor} strokeWidth={2.2} />
+                <Text style={[styles.clearX, { color: clearIconColor }]}>✕</Text>
               </Pressable>
             )}
           </View>
@@ -184,18 +170,18 @@ export default function HabitPickerScreen() {
         </View>
       </Animated.View>
 
-      {/* Icon quick-pick horizontal scroll */}
-      <Animated.View style={animStyle(3)}>
+      {/* Emoji quick-pick horizontal scroll + sticky + button */}
+      <Animated.View style={[styles.iconScrollWrap, animStyle(3)]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.iconScroll}
         >
           {HABITS.map((h) => {
-            const active = h.key === selectedKey;
+            const active = h.emoji === selectedEmoji;
             return (
               <TouchableOpacity
-                key={h.key}
+                key={h.emoji}
                 onPress={() => handleSelect(h)}
                 activeOpacity={0.75}
                 style={[
@@ -206,26 +192,60 @@ export default function HabitPickerScreen() {
                   },
                 ]}
               >
-                <Icon
-                  name={h.key}
-                  size={20}
-                  color={active ? (isDark ? '#FFFFFF' : '#FF8C00') : (isDark ? '#666666' : '#C5BFB8')}
-                />
+                <Text style={styles.iconBtnEmoji}>{h.emoji}</Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
+
+        {/* Sticky + button — always visible at the right edge */}
+        <Pressable
+          onPress={() => setEmojiPickerOpen(true)}
+          style={[styles.addEmojiBtn, { backgroundColor: isDark ? '#333333' : '#F5F3F0', borderColor: isDark ? '#444444' : '#E0DDD8' }]}
+          hitSlop={4}
+        >
+          <Text style={[styles.addEmojiBtnText, { color: isDark ? '#AAAAAA' : '#888888' }]}>+</Text>
+        </Pressable>
       </Animated.View>
+
+      <EmojiKeyboard
+        onEmojiSelected={(e) => {
+          setSelectedEmoji(e.emoji);
+          setEmojiPickerOpen(false);
+        }}
+        open={emojiPickerOpen}
+        onClose={() => setEmojiPickerOpen(false)}
+        enableSearchBar
+        theme={{
+          backdrop: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)',
+          knob: '#FF740D',
+          container: isDark ? '#1A1A1A' : '#FFFFFF',
+          header: isDark ? '#F5F5F5' : '#1A1A1A',
+          skinTonesContainer: isDark ? '#2A2A2A' : '#F5F3F0',
+          category: {
+            icon: isDark ? '#888888' : '#AAAAAA',
+            iconActive: '#FF740D',
+            container: isDark ? '#2A2A2A' : '#F5F3F0',
+            containerActive: isDark ? '#3A3A3A' : '#FFE8D6',
+          },
+          search: {
+            text: isDark ? '#F5F5F5' : '#1A1A1A',
+            placeholder: isDark ? '#666666' : '#AAAAAA',
+            icon: isDark ? '#888888' : '#AAAAAA',
+            background: isDark ? '#2A2A2A' : '#F5F3F0',
+          },
+        }}
+      />
 
       {/* Quick picks chips */}
       <Animated.View style={[styles.quickPicks, animStyle(4)]}>
         <Text style={[styles.quickPicksLabel, { color: quickPicksLabel }]}>QUICK PICKS</Text>
         <View style={styles.chipsWrap}>
           {HABITS.slice(0, 5).map((h) => {
-            const active = h.key === selectedKey;
+            const active = h.emoji === selectedEmoji;
             return (
               <TouchableOpacity
-                key={h.key}
+                key={h.emoji}
                 onPress={() => handleSelect(h)}
                 activeOpacity={0.75}
                 style={[
@@ -236,7 +256,7 @@ export default function HabitPickerScreen() {
                   },
                 ]}
               >
-                <Icon name={h.key} size={14} color={active ? '#FF8C00' : (isDark ? '#666666' : '#BDBDBD')} strokeWidth={2} />
+                <Text style={styles.chipEmoji}>{h.emoji}</Text>
                 <Text style={[styles.chipText, { color: active ? (isDark ? '#FF8C00' : '#FF7200') : chipText }]}>
                   {h.label}
                 </Text>
@@ -251,7 +271,7 @@ export default function HabitPickerScreen() {
       {/* CTA */}
       <Animated.View style={[styles.cta, { paddingBottom: insets.bottom + 24 }, animStyle(4)]}>
         <Pressable
-          onPress={() => canCreate && router.push('/onboarding/permissions' as any)}
+          onPress={handleCreate}
           disabled={!canCreate}
           style={({ pressed }) => [
             styles.ctaBtn,
@@ -289,6 +309,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  chevron: {
+    fontSize: 26,
+    lineHeight: 30,
+    fontFamily: 'DMSans_400Regular',
   },
   dots: {
     flexDirection: 'row',
@@ -338,13 +363,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
   },
-  iconBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
+  emojiBadge: {
+    fontSize: 26,
+    lineHeight: 32,
     flexShrink: 0,
   },
   nameInput: {
@@ -361,6 +382,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
+  clearX: {
+    fontSize: 10,
+    lineHeight: 14,
+  },
   noteRow: {
     paddingTop: 10,
     paddingBottom: 12,
@@ -372,6 +397,11 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans_400Regular',
     lineHeight: 20,
     width: '100%',
+  },
+  iconScrollWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 20,
   },
   iconScroll: {
     flexDirection: 'row',
@@ -387,6 +417,25 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconBtnEmoji: {
+    fontSize: 24,
+  },
+  addEmojiBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  addEmojiBtnText: {
+    fontSize: 22,
+    lineHeight: 26,
+    fontFamily: 'DMSans_400Regular',
   },
   quickPicks: {
     paddingHorizontal: 20,
@@ -411,6 +460,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 99,
     borderWidth: 1.5,
+  },
+  chipEmoji: {
+    fontSize: 13,
   },
   chipText: {
     fontSize: 13.5,

@@ -1,12 +1,22 @@
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
+import { useHabitStore } from '@/stores/habitStore';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Animated, Easing, StyleSheet, Pressable, View, Text,
+  Animated, Easing, StyleSheet, Pressable, View, Text, Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Path, Stop, Rect, Line, Polyline } from 'react-native-svg';
+import * as Notifications from 'expo-notifications';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 function BellIcon({ color = '#fff', size = 20 }: { color?: string; size?: number }) {
   return (
@@ -117,7 +127,7 @@ function PermCard({
   );
 }
 
-function WidgetPreview({ isDark }: { isDark: boolean }) {
+function WidgetPreview({ isDark, habitName, habitEmoji }: { isDark: boolean; habitName: string; habitEmoji: string }) {
   const floatY = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(
@@ -155,16 +165,19 @@ function WidgetPreview({ isDark }: { isDark: boolean }) {
             <Text style={styles.widgetBrand}>StreakUp</Text>
             <FlameWidgetIcon size={16} />
           </View>
-          <Text style={[styles.widgetHabitName, { color: habitNameColor }]}>Morning Run</Text>
+          <View style={styles.widgetHabitRow}>
+            <Text style={styles.widgetHabitEmoji}>{habitEmoji}</Text>
+            <Text style={[styles.widgetHabitName, { color: habitNameColor }]}>{habitName}</Text>
+          </View>
           <View style={styles.widgetStreakRow}>
-            <Text style={styles.widgetStreakNum}>3</Text>
+            <Text style={styles.widgetStreakNum}>1</Text>
             <Text style={[styles.widgetStreakLabel, { color: streakLabelColor }]}>day streak</Text>
           </View>
           <View style={styles.widgetDays}>
             {DAYS.map((d, i) => (
               <View key={i} style={styles.widgetDayCol}>
-                <View style={[styles.widgetDayBar, { backgroundColor: i < 3 ? '#FF740D' : dayEmpty }]} />
-                <Text style={[styles.widgetDayText, { color: i < 3 ? '#FF740D' : dayLabelEmpty }]}>{d}</Text>
+                <View style={[styles.widgetDayBar, { backgroundColor: i === 1 ? '#FF740D' : dayEmpty }]} />
+                <Text style={[styles.widgetDayText, { color: i === 1 ? '#FF740D' : dayLabelEmpty }]}>{d}</Text>
               </View>
             ))}
           </View>
@@ -174,15 +187,62 @@ function WidgetPreview({ isDark }: { isDark: boolean }) {
   );
 }
 
+function WidgetInstructionModal({ visible, isDark, onClose }: { visible: boolean; isDark: boolean; onClose: () => void }) {
+  const bg = isDark ? '#2A2A2A' : '#FFFFFF';
+  const textColor = isDark ? '#F5F5F5' : '#1A1A1A';
+  const subtextColor = isDark ? '#888888' : '#6B6862';
+  const overlayColor = isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.4)';
+
+  const steps = [
+    { emoji: '👆', text: 'Long-press your home screen' },
+    { emoji: '🔲', text: 'Tap "Widgets"' },
+    { emoji: '🔍', text: 'Scroll to find StreakUp' },
+    { emoji: '📌', text: 'Drag it to your home screen' },
+  ];
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={[styles.modalOverlay, { backgroundColor: overlayColor }]}>
+        <View style={[styles.modalCard, { backgroundColor: bg }]}>
+          <Text style={[styles.modalTitle, { color: textColor }]}>Add the Widget</Text>
+          <Text style={[styles.modalSubtext, { color: subtextColor }]}>
+            Follow these steps on your Android home screen:
+          </Text>
+          <View style={styles.modalSteps}>
+            {steps.map((s, i) => (
+              <View key={i} style={styles.modalStep}>
+                <Text style={styles.modalStepEmoji}>{s.emoji}</Text>
+                <Text style={[styles.modalStepText, { color: textColor }]}>{s.text}</Text>
+              </View>
+            ))}
+          </View>
+          <Pressable
+            onPress={onClose}
+            style={({ pressed }) => [styles.modalBtn, pressed && { opacity: 0.85 }]}
+          >
+            <Text style={styles.modalBtnText}>Got it</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function PermissionsScreen() {
   const router = useRouter();
   const { completeOnboarding } = useAuthStore();
+  const habits = useHabitStore((s) => s.habits);
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
   const [notifAllowed, setNotifAllowed] = useState(false);
   const [widgetAllowed, setWidgetAllowed] = useState(false);
+  const [widgetModalVisible, setWidgetModalVisible] = useState(false);
+
+  const firstHabit = habits[0];
+  const habitName = firstHabit?.name ?? 'Morning Run';
+  const habitEmoji = firstHabit?.emoji ?? '🏃';
 
   const fadeAnims = useRef([0, 1, 2, 3, 4].map(() => new Animated.Value(0))).current;
   const slideAnims = useRef([0, 1, 2, 3, 4].map(() => new Animated.Value(10))).current;
@@ -203,6 +263,34 @@ export default function PermissionsScreen() {
     opacity: fadeAnims[i],
     transform: [{ translateY: slideAnims[i] }],
   });
+
+  const handleAllowNotifications = async () => {
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status === 'granted') {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Don't break your streak! 🔥",
+          body: 'Check in your habits before the day ends.',
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: 20,
+          minute: 0,
+        },
+      });
+      setNotifAllowed(true);
+    }
+  };
+
+  const handleWidgetSetup = () => {
+    setWidgetModalVisible(true);
+  };
+
+  const handleWidgetModalClose = () => {
+    setWidgetModalVisible(false);
+    setWidgetAllowed(true);
+  };
 
   const bg = isDark ? '#1A1A1A' : '#FFFFFF';
   const navBtnBg = isDark ? '#2A2A2A' : '#FAFAFA';
@@ -255,7 +343,7 @@ export default function PermissionsScreen() {
           btnLabel="Allow"
           filled={true}
           allowed={notifAllowed}
-          onAllow={() => setNotifAllowed(true)}
+          onAllow={handleAllowNotifications}
           isDark={isDark}
         />
         <PermCard
@@ -265,14 +353,14 @@ export default function PermissionsScreen() {
           btnLabel="Set Up"
           filled={false}
           allowed={widgetAllowed}
-          onAllow={() => setWidgetAllowed(true)}
+          onAllow={handleWidgetSetup}
           isDark={isDark}
         />
       </Animated.View>
 
       {/* Widget preview */}
       <Animated.View style={animStyle(3)}>
-        <WidgetPreview isDark={isDark} />
+        <WidgetPreview isDark={isDark} habitName={habitName} habitEmoji={habitEmoji} />
       </Animated.View>
 
       <View style={{ flex: 1 }} />
@@ -290,6 +378,12 @@ export default function PermissionsScreen() {
           You can change these in Settings anytime
         </Text>
       </Animated.View>
+
+      <WidgetInstructionModal
+        visible={widgetModalVisible}
+        isDark={isDark}
+        onClose={handleWidgetModalClose}
+      />
 
     </View>
   );
@@ -447,11 +541,20 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  widgetHabitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 6,
+  },
+  widgetHabitEmoji: {
+    fontSize: 13,
+  },
   widgetHabitName: {
     fontFamily: 'DMSans_700Bold',
     fontSize: 13,
     lineHeight: 16,
-    marginBottom: 6,
+    flexShrink: 1,
   },
   widgetStreakRow: {
     flexDirection: 'row',
@@ -521,5 +624,68 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     lineHeight: 18,
     textAlign: 'center',
+  },
+  // Widget instruction modal
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  modalCard: {
+    width: '100%',
+    borderRadius: 24,
+    padding: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  modalTitle: {
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontSize: 22,
+    lineHeight: 28,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtext: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalSteps: {
+    gap: 14,
+    marginBottom: 28,
+  },
+  modalStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  modalStepEmoji: {
+    fontSize: 22,
+    width: 32,
+    textAlign: 'center',
+  },
+  modalStepText: {
+    fontFamily: 'DMSans_500Medium',
+    fontSize: 15,
+    lineHeight: 20,
+    flex: 1,
+  },
+  modalBtn: {
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FF740D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBtnText: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 16,
+    color: '#FFFFFF',
   },
 });

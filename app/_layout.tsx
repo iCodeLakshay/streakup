@@ -73,9 +73,9 @@ export default function RootLayout() {
     if (!fontsLoaded || !isHydrated) return;
 
     if (!user) {
-      router.replace('/login' as any);
-    } else if (!onboardingComplete) {
       router.replace('/onboarding' as any);
+    } else if (!onboardingComplete) {
+      router.replace('/onboarding/habit-picker' as any);
     }
     // Authenticated + onboarded: already at '/' = (tabs)/index, no navigation needed.
 

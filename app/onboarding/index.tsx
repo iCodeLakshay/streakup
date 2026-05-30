@@ -250,17 +250,11 @@ export default function OnboardingScreen() {
       {/* ── CTA pinned to bottom ── */}
       <Animated.View style={[styles.cta, anim(3)]}>
         <Pressable
-          onPress={() => router.push('/onboarding/habit-picker' as any)}
+          onPress={() => router.push('/signup' as any)}
           style={({ pressed }) => [styles.getStartedBtn, pressed && styles.getStartedBtnPressed]}
         >
           <Text style={styles.getStartedText}>Get Started</Text>
         </Pressable>
-        <Text style={[styles.loginText, { color: '#9E9E9E' }]}>
-          Already have an account?{' '}
-          <Text style={styles.loginLink} onPress={() => router.push('/login' as any)}>
-            Log in
-          </Text>
-        </Text>
       </Animated.View>
 
     </View>
@@ -378,13 +372,5 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: '#FFFFFF',
     letterSpacing: 0.2,
-  },
-  loginText: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 14,
-  },
-  loginLink: {
-    color: '#FF8C00',
-    fontFamily: 'DMSans_700Bold',
   },
 });
