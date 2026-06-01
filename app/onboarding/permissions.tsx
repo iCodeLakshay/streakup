@@ -7,16 +7,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Path, Stop, Rect, Line, Polyline } from 'react-native-svg';
-import * as Notifications from 'expo-notifications';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+import { requestAndSchedule } from '@/utils/notifications';
 
 function BellIcon({ color = '#fff', size = 20 }: { color?: string; size?: number }) {
   return (
@@ -265,22 +257,8 @@ export default function PermissionsScreen() {
   });
 
   const handleAllowNotifications = async () => {
-    const { status } = await Notifications.requestPermissionsAsync();
-    if (status === 'granted') {
-      await Notifications.cancelAllScheduledNotificationsAsync();
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Don't break your streak! 🔥",
-          body: 'Check in your habits before the day ends.',
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          hour: 20,
-          minute: 0,
-        },
-      });
-      setNotifAllowed(true);
-    }
+    const granted = await requestAndSchedule();
+    if (granted) setNotifAllowed(true);
   };
 
   const handleWidgetSetup = () => {

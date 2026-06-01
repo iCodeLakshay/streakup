@@ -8,6 +8,9 @@ const LAST_SYNC_KEY       = '@streakup/last-sync-at';
 const FREEZE_COUNT_KEY    = '@streakup/freeze-count';
 const FREEZE_REPLENISH_KEY = '@streakup/freeze-replenish';
 const AVATAR_KEY          = '@streakup/avatar-uri';
+const NOTIF_SLOTS_KEY     = '@streakup/notification-slots';
+
+const DEFAULT_NOTIFICATION_SLOTS = [9, 13, 18, 21];
 
 const MAX_FREEZES = 3;
 
@@ -21,6 +24,7 @@ interface SettingsStore {
   lastSyncAt: string | null;
   freezeCount: number;
   lastFreezeReplenish: string | null;
+  notificationSlots: number[];
   isHydrated: boolean;
   hydrate: () => Promise<void>;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
@@ -29,6 +33,7 @@ interface SettingsStore {
   setAvatarUri: (uri: string | null) => Promise<void>;
   setLastSyncAt: (ts: string) => void;
   consumeFreeze: () => boolean;
+  setNotificationSlots: (slots: number[]) => Promise<void>;
 }
 
 function getISOWeek(date: Date): string {
@@ -48,11 +53,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   lastSyncAt: null,
   freezeCount: MAX_FREEZES,
   lastFreezeReplenish: null,
+  notificationSlots: DEFAULT_NOTIFICATION_SLOTS,
   isHydrated: false,
 
   hydrate: async () => {
     try {
-      const [theme, notifs, name, avatar, lastSync, freezeRaw, replenishRaw] = await Promise.all([
+      const [theme, notifs, name, avatar, lastSync, freezeRaw, replenishRaw, slotsRaw] = await Promise.all([
         AsyncStorage.getItem(THEME_KEY),
         AsyncStorage.getItem(NOTIFS_KEY),
         AsyncStorage.getItem(DNAME_KEY),
@@ -60,6 +66,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.getItem(LAST_SYNC_KEY),
         AsyncStorage.getItem(FREEZE_COUNT_KEY),
         AsyncStorage.getItem(FREEZE_REPLENISH_KEY),
+        AsyncStorage.getItem(NOTIF_SLOTS_KEY),
       ]);
 
       const storedCount = freezeRaw !== null ? parseInt(freezeRaw, 10) : MAX_FREEZES;
@@ -76,6 +83,18 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         AsyncStorage.setItem(FREEZE_REPLENISH_KEY, thisWeek).catch(() => {});
       }
 
+      let notificationSlots: number[] = DEFAULT_NOTIFICATION_SLOTS;
+      try {
+        if (slotsRaw !== null) {
+          const parsed = JSON.parse(slotsRaw) as unknown;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            notificationSlots = parsed as number[];
+          }
+        }
+      } catch {
+        // fallback to default
+      }
+
       set({
         themeMode: (theme as ThemeMode | null) ?? 'system',
         notificationsEnabled: notifs !== 'false',
@@ -84,6 +103,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         lastSyncAt: lastSync,
         freezeCount,
         lastFreezeReplenish,
+        notificationSlots,
         isHydrated: true,
       });
     } catch {
@@ -127,5 +147,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     set({ freezeCount: next });
     AsyncStorage.setItem(FREEZE_COUNT_KEY, String(next)).catch(() => {});
     return true;
+  },
+
+  setNotificationSlots: async (slots) => {
+    set({ notificationSlots: slots });
+    await AsyncStorage.setItem(NOTIF_SLOTS_KEY, JSON.stringify(slots));
   },
 }));

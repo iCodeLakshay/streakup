@@ -40,7 +40,7 @@ function CheckIcon({ color, size = 12 }: { color: string; size?: number }) {
 
 function PencilIcon({ color }: { color: string }) {
   return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
       <Path
         d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
         stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
@@ -49,6 +49,15 @@ function PencilIcon({ color }: { color: string }) {
         d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
         stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
       />
+    </Svg>
+  );
+}
+
+function TrashIcon({ color }: { color: string }) {
+  return (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+      <Path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M10 11v6M14 11v6" stroke={color} strokeWidth={2} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -131,7 +140,11 @@ export default function HabitDetailScreen() {
   const handleDelete = async () => {
     setShowDeleteModal(false);
     await removeHabit(habit.id);
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
   };
 
   const handleFreeze = async () => {
@@ -152,9 +165,7 @@ export default function HabitDetailScreen() {
         <Text style={[styles.navTitle, { color: textPrimary }]} numberOfLines={1}>
           {habit.name}
         </Text>
-        <Pressable style={styles.editButton} onPress={() => setShowEdit(true)} hitSlop={8}>
-          <PencilIcon color={textSecondary} />
-        </Pressable>
+        <View style={styles.navPlaceholder} />
       </View>
 
       <Animated.ScrollView
@@ -258,17 +269,22 @@ export default function HabitDetailScreen() {
           </View>
         )}
 
-        {/* Delete zone */}
-        <View style={[styles.deleteZone, { borderColor: deleteBorder, backgroundColor: deleteBg }]}>
+        {/* Edit + Delete row */}
+        <View style={styles.actionRow}>
           <Pressable
-            style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.actionBtn, styles.actionBtnEdit, { borderColor: isDark ? '#3A3835' : '#E8E5E0', backgroundColor: isDark ? '#2A2826' : '#F5F3F0' }, pressed && { opacity: 0.7 }]}
+            onPress={() => setShowEdit(true)}
+          >
+            <PencilIcon color={textSecondary} />
+            <Text style={[styles.actionBtnText, { color: textSecondary }]}>Edit</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.actionBtn, styles.actionBtnDelete, { borderColor: deleteBorder, backgroundColor: deleteBg }, pressed && { opacity: 0.7 }]}
             onPress={() => setShowDeleteModal(true)}
           >
-            <Text style={styles.deleteBtnText}>Delete Habit</Text>
+            <TrashIcon color="#DC2626" />
+            <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>Delete</Text>
           </Pressable>
-          <Text style={[styles.deleteHint, { color: textMuted }]}>
-            This will permanently remove this habit and all its history.
-          </Text>
         </View>
 
       </Animated.ScrollView>
@@ -391,10 +407,8 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans_700Bold',
     fontSize: 16,
   },
-  editButton: {
+  navPlaceholder: {
     minWidth: 64,
-    alignItems: 'flex-end',
-    paddingRight: 4,
   },
 
   scrollContent: { flexGrow: 1 },
@@ -567,29 +581,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  // Delete zone
-  deleteZone: {
+  // Action row (Edit + Delete)
+  actionRow: {
+    flexDirection: 'row',
     marginHorizontal: 20,
     marginTop: 28,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    padding: 16,
-    gap: 8,
+    gap: 10,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1.5,
   },
-  deleteBtn: {
-    paddingVertical: 4,
-  },
-  deleteBtnText: {
-    fontFamily: 'DMSans_700Bold',
-    fontSize: 15,
-    color: '#DC2626',
-  },
-  deleteHint: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 12,
-    lineHeight: 17,
-    textAlign: 'center',
+  actionBtnEdit: {},
+  actionBtnDelete: {},
+  actionBtnText: {
+    fontFamily: 'DMSans_500Medium',
+    fontSize: 14,
   },
 
   // Delete confirmation modal

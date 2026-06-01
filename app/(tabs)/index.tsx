@@ -7,7 +7,8 @@ import {
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { pull } from '@/services/syncService';
 import {
   useHabitStore, getTodayDateString, getStreakCount,
   type Habit, type Completion, type Freeze,
@@ -307,8 +308,14 @@ export default function HomeScreen() {
     );
   }, [habits, completions, isDark, handleToggle]);
 
-  const { user }                    = useAuthStore();
-  const { displayName, avatarUri }  = useSettingsStore();
+  const { user }                            = useAuthStore();
+  const { displayName, avatarUri, lastSyncAt } = useSettingsStore();
+  const lastSyncAtRef = useRef(lastSyncAt);
+  lastSyncAtRef.current = lastSyncAt;
+
+  // Refresh from server when returning to Home (fire-and-forget; pull is silent).
+  // Use a ref so lastSyncAt changes never recreate the callback and re-trigger the effect.
+  useFocusEffect(useCallback(() => { pull(lastSyncAtRef.current); }, []));
 
   const userName   = displayName.trim() || user?.email?.split('@')[0] || '';
   const greeting   = `${getGreeting()}${userName ? `, ${userName}` : ''} 👋`;

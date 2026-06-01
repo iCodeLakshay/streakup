@@ -1,9 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Path, Polyline } from 'react-native-svg';
+import Svg, { Circle, Polyline } from 'react-native-svg';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { Habit } from '@/stores/habitStore';
+import { StreakFlame } from '@/components/StreakFlame';
 
 interface HabitCardProps {
   habit: Habit;
@@ -13,18 +14,6 @@ interface HabitCardProps {
   onPress?: () => void;
   entranceIndex: number;
   dimmed?: boolean;
-}
-
-function FlameIcon({ color, size = 13 }: { color: string; size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M12 2c0 6-6 8-6 14a6 6 0 0 0 12 0c0-6-6-8-6-14z"
-        fill={color}
-        stroke="none"
-      />
-    </Svg>
-  );
 }
 
 export function HabitCard({
@@ -84,7 +73,6 @@ export function HabitCard({
     : (isDark ? '#3A3835' : '#E8E5E0');
   const nameColor = isDark ? '#F5F3F0' : '#1F1D1B';
   const streakColor = isDark ? '#8A8780' : '#7A776F';
-  const flameColor = isZero ? '#B8B5AE' : '#FF740D';
   const emojiBg = isCompleted
     ? (isDark ? '#0F2820' : '#D1FAE5')
     : (isDark ? '#333130' : '#EEECEA');
@@ -120,7 +108,7 @@ export function HabitCard({
             {habit.name}
           </Text>
           <View style={styles.streakRow}>
-            <FlameIcon color={flameColor} size={13} />
+            <StreakFlame streak={streakCount} size={13} />
             <Text style={[styles.streakText, { color: streakColor }]}>
               {streakCount > 0 ? `${streakCount} day streak` : 'Start your streak!'}
             </Text>

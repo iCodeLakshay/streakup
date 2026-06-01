@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable,
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -262,7 +262,7 @@ export default function SignUpScreen() {
                 styles.googleBtn,
                 { backgroundColor: surface1, borderColor: border, opacity: pressed ? 0.80 : 1 },
               ]}
-              onPress={() => {/* Google OAuth — coming soon */ }}
+              onPress={() => Alert.alert('Coming soon', 'Google sign-in is not available yet.')}
             >
               <GoogleIcon />
               <Text style={[styles.googleText, { color: textPri }]}>Continue with Google</Text>

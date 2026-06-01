@@ -27,6 +27,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "expo-dev-client",
       "expo-router",
       [
         "expo-splash-screen",
@@ -42,6 +43,8 @@
       ],
       "expo-sqlite",
       "expo-notifications",
+      "expo-task-manager",
+      "expo-background-fetch",
       [
         "expo-image-picker",
         {

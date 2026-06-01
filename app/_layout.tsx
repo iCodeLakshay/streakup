@@ -22,8 +22,14 @@ import { useHabitStore } from '@/stores/habitStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { initDb } from '@/services/db';
 import { pull } from '@/services/syncService';
+import { configureNotificationHandler, rescheduleNotifications } from '@/utils/notifications';
+import '@/utils/backgroundTask';
+import { registerBackgroundSync } from '@/utils/backgroundTask';
+import { setOnUnauthorized } from '@/services/api';
+import { useDayChange } from '@/hooks/use-day-change';
 
 SplashScreen.preventAutoHideAsync();
+configureNotificationHandler();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -34,17 +40,33 @@ export default function RootLayout() {
 
   const appState = useRef<AppStateStatus>(AppState.currentState);
   const prevUser = useRef(user);
+  const lastSyncAtRef = useRef(lastSyncAt);
+  lastSyncAtRef.current = lastSyncAt;
 
   const [sansLoaded] = useDMSans({ DMSans_400Regular, DMSans_500Medium, DMSans_700Bold });
   const [serifLoaded] = useDMSerif({ DMSerifDisplay_400Regular });
 
   const fontsLoaded = sansLoaded && serifLoaded;
 
-  // Init SQLite + hydrate on launch
+  // Init SQLite + hydrate on launch, then schedule reminders (best-effort)
   useEffect(() => {
     hydrateSettings();
-    initDb().then(hydrate);
+    initDb().then(hydrate).then(() => rescheduleNotifications()).then(() => registerBackgroundSync());
   }, []);
+
+  // Register a global 401 handler: clear session and send to login.
+  useEffect(() => {
+    setOnUnauthorized(() => {
+      useAuthStore.getState().logout();
+      router.replace('/login' as any);
+    });
+    return () => setOnUnauthorized(null);
+  }, []);
+
+  // Re-derive reminders on a day rollover (streaks recompute on next render).
+  useDayChange(() => {
+    rescheduleNotifications();
+  });
 
   // First sign-in this session: load local habits then pull from server
   useEffect(() => {
@@ -59,12 +81,13 @@ export default function RootLayout() {
     if (!user) return;
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
       if (appState.current.match(/inactive|background/) && next === 'active') {
-        pull(lastSyncAt);
+        pull(lastSyncAtRef.current);
+        rescheduleNotifications();
       }
       appState.current = next;
     });
     return () => sub.remove();
-  }, [user, lastSyncAt]);
+  }, [user]);
 
   // Single routing authority — runs whenever auth state settles or changes.
   // Hides the splash screen right after deciding where to go, so the splash
