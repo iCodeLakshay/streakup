@@ -1,0 +1,77 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ribbonLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#991B1B"/>
+      <stop offset="100%" stop-color="#DC2626"/>
+    </linearGradient>
+
+    <linearGradient id="ribbonRight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#DC2626"/>
+      <stop offset="100%" stop-color="#EF4444"/>
+    </linearGradient>
+
+    <radialGradient id="medal" cx="35%" cy="30%">
+      <stop offset="0%" stop-color="#FECACA"/>
+      <stop offset="55%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#991B1B"/>
+    </radialGradient>
+
+    <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FECACA"/>
+      <stop offset="100%" stop-color="#991B1B"/>
+    </linearGradient>
+
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Ribbon -->
+  <g filter="url(#shadow)">
+    <polygon points="130,40 220,40 280,170 200,170"
+             fill="url(#ribbonLeft)"/>
+
+    <polygon points="292,40 382,40 312,170 232,170"
+             fill="url(#ribbonRight)"/>
+
+    <rect x="205" y="155"
+          width="102"
+          height="40"
+          rx="8"
+          fill="#F8FAFC"
+          stroke="#CBD5E1"
+          stroke-width="6"/>
+  </g>
+
+  <!-- Medal -->
+  <g filter="url(#shadow)">
+    <circle cx="256" cy="315" r="130"
+            fill="url(#ring)"/>
+
+    <circle cx="256" cy="315" r="108"
+            fill="url(#medal)"
+            stroke="#FECACA"
+            stroke-width="8"/>
+
+    <circle cx="256" cy="315" r="92"
+            fill="none"
+            stroke="#FECACA"
+            stroke-width="5"
+            opacity="0.6"/>
+
+    <!-- Streak count -->
+    <text x="256" y="332"
+          text-anchor="middle"
+          font-size="70"
+          font-weight="900"
+          font-family="Inter, Arial, sans-serif"
+          fill="white">100</text>
+
+    <!-- Highlight -->
+    <ellipse cx="225" cy="265"
+             rx="45"
+             ry="22"
+             fill="white"
+             opacity="0.18"/>
+  </g>
+</svg>

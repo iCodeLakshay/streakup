@@ -14,11 +14,14 @@ import {
   getThisMonthDisplay,
   getAllTimeCount,
   getWeekStatus,
+  getTargetProgress,
   getYesterdayDateString,
   type Habit,
 } from '@/stores/habitStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { AddHabitSheet } from '@/components/AddHabitSheet';
+import { TargetReachedModal } from '@/components/TargetReachedModal';
+import { TargetProgressBar } from '@/components/TargetProgressBar';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -69,7 +72,8 @@ export default function HabitDetailScreen() {
   const insets = useSafeAreaInsets();
   const isDark = useColorScheme() === 'dark';
 
-  const habit       = useHabitStore((s) => s.habits.find((h) => h.id === id));
+  const habits      = useHabitStore((s) => s.habits);
+  const habit       = habits.find((h) => h.id === id);
   const completions = useHabitStore((s) => s.completions);
   const freezes     = useHabitStore((s) => s.freezes);
   const editHabit   = useHabitStore((s) => s.editHabit);
@@ -82,6 +86,7 @@ export default function HabitDetailScreen() {
   const [showEdit, setShowEdit]               = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showFreezeModal, setShowFreezeModal] = useState(false);
+  const [showTargetModal, setShowTargetModal] = useState(false);
 
   // Entrance animation
   const contentFade = useRef(new Animated.Value(0)).current;
@@ -104,8 +109,9 @@ export default function HabitDetailScreen() {
   if (!habit) return null;
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const currentStreak = getStreakCount(habit.id, completions, freezes);
-  const bestStreak    = getBestStreak(habit.id, completions, freezes);
+  const currentStreak  = getStreakCount(habit.id, completions, freezes);
+  const bestStreak     = getBestStreak(habit.id, completions, freezes);
+  const targetProgress = getTargetProgress(habit.id, completions, freezes, habits);
   const { completed: monthDone, daysPassed } = getThisMonthDisplay(habit.id, completions);
   const allTime  = getAllTimeCount(habit.id, completions);
   const weekDays = getWeekStatus(habit.id, completions, freezes);
@@ -132,7 +138,7 @@ export default function HabitDetailScreen() {
   const deleteBg      = isDark ? '#2A1A1A' : '#FFF5F5';
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleSave = async (id: string, updates: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleSave = async (id: string, updates: Partial<Omit<Habit, 'id' | 'createdAt' | 'serverId'>>) => {
     await editHabit(id, updates);
     setShowEdit(false);
   };
@@ -202,6 +208,29 @@ export default function HabitDetailScreen() {
           <StatCell value={`${allTime}`} label="ALL TIME" divider={statsDivider} textPrimary={textPrimary} textMuted={textMuted} showDivider={false} />
         </View>
 
+        {/* Target progress */}
+        {targetProgress.target > 0 && (
+          <Pressable
+            style={[styles.targetCard, { borderColor: targetProgress.reached ? '#4CAF50' : (isDark ? '#3A3835' : '#E8E5E0'), backgroundColor: targetProgress.reached ? (isDark ? '#0F2820' : '#F0FFF4') : (isDark ? '#2A2826' : '#FAFAF8') }]}
+            onPress={() => { if (habit.targetCompletedAt) setShowTargetModal(true); }}
+          >
+            <View style={styles.targetCardTop}>
+              <Text style={[styles.targetCardLabel, { color: isDark ? '#6A6762' : '#B8B5AE' }]}>
+                {habit.targetType === 'total' ? 'TOTAL TARGET' : habit.targetType === 'weekdays' ? 'WEEKDAYS TARGET' : habit.targetType === 'weekly_frequency' ? 'WEEKLY TARGET' : 'STREAK TARGET'}
+              </Text>
+              {habit.targetCompletedAt && (
+                <Text style={styles.targetReachedBadge}>🏆 Reached</Text>
+              )}
+            </View>
+            <TargetProgressBar
+              current={targetProgress.current}
+              target={targetProgress.target}
+              label={targetProgress.label}
+              reached={targetProgress.reached}
+            />
+          </Pressable>
+        )}
+
         {/* Weekly grid */}
         <View style={styles.weekSection}>
           <Text style={[styles.weekLabel, { color: textMuted }]}>THIS WEEK</Text>
@@ -233,7 +262,7 @@ export default function HabitDetailScreen() {
           </View>
         </View>
 
-        {/* Freeze zone */}
+        {/* Freeze zone — only when user can actually use a freeze */}
         {canFreeze && (
           <View style={[styles.freezeZone, { borderColor: isDark ? '#1E3A5F' : '#BFDBFE', backgroundColor: isDark ? '#0F2033' : '#EFF6FF' }]}>
             <View style={styles.freezeHeader}>
@@ -245,9 +274,6 @@ export default function HabitDetailScreen() {
                 </Text>
               </View>
             </View>
-            <Text style={[styles.freezeBody, { color: isDark ? '#93C5FD' : '#1E40AF' }]}>
-              You missed yesterday. Use a freeze to protect your streak.
-            </Text>
             <Pressable
               style={({ pressed }) => [styles.freezeBtn, pressed && { opacity: 0.8 }]}
               onPress={() => setShowFreezeModal(true)}
@@ -257,8 +283,8 @@ export default function HabitDetailScreen() {
           </View>
         )}
 
-        {/* Freeze count chip (always visible when freezes available) */}
-        {!canFreeze && freezeCount > 0 && (
+        {/* removed always-visible freeze chip — freeze UI only appears when actionable */}
+        {false && !canFreeze && freezeCount > 0 && (
           <View style={styles.freezeChipRow}>
             <View style={[styles.freezeChip, { borderColor: isDark ? '#1E3A5F' : '#BFDBFE', backgroundColor: isDark ? '#0F2033' : '#EFF6FF' }]}>
               <Text style={styles.freezeChipEmoji}>❄️</Text>
@@ -295,6 +321,26 @@ export default function HabitDetailScreen() {
         onClose={() => setShowEdit(false)}
         habitToEdit={habit}
         onSave={handleSave}
+      />
+
+      {/* Target reached modal */}
+      <TargetReachedModal
+        visible={showTargetModal}
+        habitName={habit.name}
+        habitEmoji={habit.emoji}
+        targetType={habit.targetType}
+        targetValue={habit.targetValue}
+        onArchive={() => {
+          setShowTargetModal(false);
+          removeHabit(habit.id);
+          if (router.canGoBack()) router.back();
+          else router.replace('/(tabs)');
+        }}
+        onSetNewTarget={(newValue) => {
+          setShowTargetModal(false);
+          editHabit(habit.id, { targetValue: newValue, targetCompletedAt: null });
+        }}
+        onDismiss={() => setShowTargetModal(false)}
       />
 
       {/* Freeze confirmation modal */}
@@ -579,6 +625,31 @@ const styles = StyleSheet.create({
   freezeChipText: {
     fontFamily: 'DMSans_500Medium',
     fontSize: 12,
+  },
+
+  // Target progress card
+  targetCard: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    padding: 16,
+    gap: 10,
+  },
+  targetCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  targetCardLabel: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 11,
+    letterSpacing: 0.8,
+  },
+  targetReachedBadge: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 12,
+    color: '#4CAF50',
   },
 
   // Action row (Edit + Delete)

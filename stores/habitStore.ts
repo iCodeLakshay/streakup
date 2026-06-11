@@ -20,10 +20,14 @@ import {
 import {
   getTodayDateString,
   getYesterdayDateString,
+  getWeekStartString,
 } from '@/utils/date';
+import { getStreakCount } from '@/utils/streak';
 
 // Re-export for back-compat: many screens import these from this file.
 export { getTodayDateString, getYesterdayDateString } from '@/utils/date';
+
+export type TargetType = 'streak' | 'total' | 'weekdays' | 'weekly_frequency';
 
 export interface Habit {
   id: string;
@@ -34,6 +38,9 @@ export interface Habit {
   createdAt: string;
   updatedAt: string;
   serverId?: string;
+  targetType: TargetType;
+  targetValue: number;
+  targetCompletedAt: string | null;
 }
 
 export interface Completion {
@@ -54,7 +61,11 @@ interface HabitStore {
   freezes: Freeze[];
   isHydrated: boolean;
   hydrate: () => Promise<void>;
-  addHabit: (h: Omit<Habit, 'id' | 'createdAt' | 'updatedAt' | 'serverId'>) => Promise<void>;
+  addHabit: (h: Omit<Habit, 'id' | 'createdAt' | 'updatedAt' | 'serverId' | 'targetType' | 'targetValue' | 'targetCompletedAt'> & {
+    targetType?: TargetType;
+    targetValue?: number;
+    targetCompletedAt?: string | null;
+  }) => Promise<void>;
   editHabit: (id: string, updates: Partial<Omit<Habit, 'id' | 'createdAt' | 'serverId'>>) => Promise<void>;
   removeHabit: (id: string) => Promise<void>;
   toggleCompletion: (habitId: string, date: string) => Promise<void>;
@@ -83,6 +94,9 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
   addHabit: async (h) => {
     const now = new Date().toISOString();
     const habit: Habit = {
+      targetType: 'streak',
+      targetValue: 30,
+      targetCompletedAt: null,
       ...h,
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       createdAt: now,
@@ -170,3 +184,48 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
 
 export { getTodayCompletions, getStreakCount, getBestStreak, getThisMonthDisplay, getAllTimeCount, getWeekStatus } from '@/utils/streak';
 export type { WeekDay } from '@/utils/streak';
+
+// ── Target progress ───────────────────────────────────────────────────────────
+
+export function getTargetProgress(
+  habitId: string,
+  completions: Completion[],
+  freezes: Freeze[],
+  habits: Habit[]
+): { current: number; target: number; label: string; reached: boolean } {
+  const habit = habits.find(h => h.id === habitId);
+  if (!habit) return { current: 0, target: 0, label: '', reached: false };
+
+  const { targetType, targetValue } = habit;
+
+  if (targetType === 'total') {
+    const current = completions.filter(c => c.habitId === habitId).length;
+    return { current, target: targetValue, label: `${current} / ${targetValue} total`, reached: current >= targetValue };
+  }
+
+  if (targetType === 'weekdays') {
+    // targetValue is a bitmask — count number of selected days
+    const selectedCount = [0, 1, 2, 3, 4, 5, 6].filter(i => targetValue & (1 << i)).length;
+    const current = getStreakCount(habitId, completions, freezes, { targetType, targetValue });
+    const days = selectedCount === 1 ? 'day' : 'days';
+    return { current, target: selectedCount, label: `${current} / ${selectedCount} ${days}`, reached: current >= selectedCount };
+  }
+
+  if (targetType === 'weekly_frequency') {
+    const today = getTodayDateString();
+    const weekStart = getWeekStartString();
+    const thisWeekCompletions = completions.filter(
+      c => c.habitId === habitId && c.date >= weekStart && c.date <= today
+    ).length;
+    return {
+      current: thisWeekCompletions,
+      target: targetValue,
+      label: `${thisWeekCompletions} / ${targetValue} this week`,
+      reached: thisWeekCompletions >= targetValue,
+    };
+  }
+
+  // streak (default)
+  const current = getStreakCount(habitId, completions, freezes);
+  return { current, target: targetValue, label: `${current} / ${targetValue} day streak`, reached: current >= targetValue };
+}

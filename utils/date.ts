@@ -38,3 +38,8 @@ export function diffInDays(a: string, b: string): number {
 export function startOfWeekMonday(d: Date): Date {
   return startOfWeek(d, { weekStartsOn: 1 });
 }
+
+/** This week's Monday as 'YYYY-MM-DD' (local time). */
+export function getWeekStartString(): string {
+  return format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+}

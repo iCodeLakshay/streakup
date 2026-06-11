@@ -9,7 +9,7 @@
 import { api } from './api';
 import { dbUpdateHabitServerId, dbInsertCompletion, dbDeleteCompletion } from './db';
 import { useSettingsStore } from '@/stores/settingsStore';
-import type { Habit, Completion } from '@/stores/habitStore';
+import type { Habit, Completion, TargetType } from '@/stores/habitStore';
 
 // Lazy accessor breaks the circular dep — evaluated inside function bodies only,
 // by which point both modules are fully initialised.
@@ -27,6 +27,9 @@ interface ServerHabit {
   createdAt: string;
   updatedAt: string;
   archivedAt: string | null;
+  targetType: string;
+  targetValue: number;
+  targetCompletedAt: string | null;
 }
 
 interface ServerCompletion {
@@ -60,6 +63,8 @@ export function createHabitOnServer(habit: Habit): void {
       emoji: habit.emoji,
       color: habit.color,
       note: habit.note,
+      targetType: habit.targetType,
+      targetValue: habit.targetValue,
     });
     const serverId = res.data.data._id;
     await dbUpdateHabitServerId(habit.id, serverId);
@@ -78,6 +83,9 @@ export function updateHabitOnServer(habit: Habit): void {
       emoji: habit.emoji,
       color: habit.color,
       note: habit.note,
+      targetType: habit.targetType,
+      targetValue: habit.targetValue,
+      targetCompletedAt: habit.targetCompletedAt,
     });
   });
 }
@@ -126,6 +134,9 @@ export async function pull(since: string | null): Promise<void> {
             color: sh.color ?? updatedHabits[idx].color,
             note: sh.note,
             updatedAt: sh.updatedAt,
+            targetType: (sh.targetType as TargetType) ?? updatedHabits[idx].targetType,
+            targetValue: sh.targetValue ?? updatedHabits[idx].targetValue,
+            targetCompletedAt: sh.targetCompletedAt ?? null,
           };
         }
       }
@@ -191,6 +202,9 @@ export async function push(): Promise<void> {
       note: h.note,
       createdAt: h.createdAt,
       updatedAt: h.updatedAt,
+      targetType: h.targetType,
+      targetValue: h.targetValue,
+      targetCompletedAt: h.targetCompletedAt,
     }));
 
     const serverCompletions = completions

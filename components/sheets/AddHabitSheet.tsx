@@ -7,25 +7,19 @@ import EmojiKeyboard from 'rn-emoji-keyboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { Habit } from '@/stores/habitStore';
+import { TargetPicker, type TargetPickerValue } from '@/components/TargetPicker';
 
 const EMOJI_PRESETS = [
   '🔥','💪','📚','🧘','🏃','💧','🥗','😴','✍️','🎯',
   '🎸','🌿','⚡','🧠','❤️','🌅','🦷','💊','🏊','🚴',
 ];
 
-const COLOR_SWATCHES = [
-  '#FF740D','#FF3B30','#FF9500','#34C759',
-  '#007AFF','#5856D6','#FF2D55','#8E8E93',
-];
-
 interface AddHabitSheetProps {
   visible: boolean;
   onClose: () => void;
-  // Add mode
-  onAdd?: (h: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  // Edit mode — provide habitToEdit to switch into edit mode
+  onAdd?: (h: Omit<Habit, 'id' | 'createdAt' | 'updatedAt' | 'serverId'>) => void;
   habitToEdit?: Habit;
-  onSave?: (id: string, updates: Omit<Habit, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onSave?: (id: string, updates: Partial<Omit<Habit, 'id' | 'createdAt' | 'serverId'>>) => void;
 }
 
 export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: AddHabitSheetProps) {
@@ -38,23 +32,22 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
 
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🔥');
-  const [color, setColor] = useState('#FF740D');
-  const [note, setNote] = useState('');
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [targetPicker, setTargetPicker] = useState<TargetPickerValue>({ type: 'streak', value: 30 });
 
   const slideY = useRef(new Animated.Value(700)).current;
   const bgOpacity = useRef(new Animated.Value(0)).current;
 
-  // Pre-fill or reset form when sheet opens or habitToEdit changes
   useEffect(() => {
     if (visible) {
       if (habitToEdit) {
         setName(habitToEdit.name);
         setEmoji(habitToEdit.emoji);
-        setColor(habitToEdit.color);
-        setNote(habitToEdit.note ?? '');
+        setTargetPicker({ type: habitToEdit.targetType, value: habitToEdit.targetValue });
       } else {
-        setName(''); setNote(''); setEmoji('🔥'); setColor('#FF740D');
+        setName('');
+        setEmoji('🔥');
+        setTargetPicker({ type: 'streak', value: 30 });
       }
       setEmojiPickerOpen(false);
     }
@@ -63,21 +56,13 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.timing(slideY, {
-          toValue: 0, duration: 340, easing: Easing.out(Easing.ease), useNativeDriver: true,
-        }),
-        Animated.timing(bgOpacity, {
-          toValue: 1, duration: 300, useNativeDriver: true,
-        }),
+        Animated.timing(slideY, { toValue: 0, duration: 340, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(bgOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(slideY, {
-          toValue: 700, duration: 260, easing: Easing.in(Easing.ease), useNativeDriver: true,
-        }),
-        Animated.timing(bgOpacity, {
-          toValue: 0, duration: 220, useNativeDriver: true,
-        }),
+        Animated.timing(slideY, { toValue: 700, duration: 260, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+        Animated.timing(bgOpacity, { toValue: 0, duration: 220, useNativeDriver: true }),
       ]).start();
     }
   }, [visible]);
@@ -86,7 +71,15 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
 
   const handleSubmit = () => {
     if (!canSubmit) return;
-    const payload = { name: name.trim(), emoji, color, note: note.trim() || null };
+    const payload = {
+      name: name.trim(),
+      emoji,
+      color: '#FF740D',
+      note: null as string | null,
+      targetType: targetPicker.type,
+      targetValue: targetPicker.value,
+      targetCompletedAt: null as string | null,
+    };
     if (isEditMode && habitToEdit && onSave) {
       onSave(habitToEdit.id, payload);
     } else if (!isEditMode && onAdd) {
@@ -95,7 +88,6 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
     onClose();
   };
 
-  // ── Colors ────────────────────────────────────────────────────────────────
   const sheetBg       = isDark ? '#1C1C1E' : '#FFFFFF';
   const handleBg      = isDark ? '#48484A' : '#D1D1D6';
   const labelColor    = isDark ? '#F5F5F5' : '#1A1A1A';
@@ -111,12 +103,10 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
 
-      {/* Backdrop */}
       <Animated.View style={[styles.backdrop, { opacity: bgOpacity }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
-      {/* KAV wraps only the sheet — Android handles keyboard natively, iOS needs padding */}
       <KeyboardAvoidingView
         style={styles.kavContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -131,31 +121,23 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
         >
           <View style={[styles.handle, { backgroundColor: handleBg }]} />
 
-          {/* Header */}
           <View style={styles.sheetHeader}>
             <Text style={[styles.sheetTitle, { color: labelColor }]}>
               {isEditMode ? 'Edit Habit' : 'New Habit'}
             </Text>
-            <Pressable
-              onPress={onClose}
-              style={[styles.closeBtn, { backgroundColor: closeBtnBg }]}
-              hitSlop={8}
-            >
+            <Pressable onPress={onClose} style={[styles.closeBtn, { backgroundColor: closeBtnBg }]} hitSlop={8}>
               <Text style={{ fontSize: 16, color: isDark ? '#EBEBF5' : '#666' }}>✕</Text>
             </Pressable>
           </View>
 
-          {/* Scrollable form body */}
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[styles.scrollBody, { paddingBottom: insets.bottom + 24 }]}
           >
-
-            {/* Emoji picker */}
+            {/* Icon */}
             <Text style={[styles.sectionLabel, { color: subLabelColor }]}>ICON</Text>
             <View style={styles.emojiRow}>
-              {/* Scrollable presets — selected emoji always first */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -179,12 +161,7 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
                   </Pressable>
                 ))}
               </ScrollView>
-
-              {/* Sticky + button — opens full emoji keyboard */}
-              <Pressable
-                onPress={() => setEmojiPickerOpen(true)}
-                style={[styles.emojiAddBtn]}
-              >
+              <Pressable onPress={() => setEmojiPickerOpen(true)} style={styles.emojiAddBtn}>
                 <Text style={styles.emojiAddBtnText}>+</Text>
               </Pressable>
             </View>
@@ -215,7 +192,7 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
               }}
             />
 
-            {/* Habit name */}
+            {/* Name */}
             <Text style={[styles.sectionLabel, { color: subLabelColor, marginTop: 20 }]}>NAME</Text>
             <TextInput
               value={name}
@@ -224,35 +201,12 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
               placeholderTextColor={placeholder}
               maxLength={40}
               style={[styles.nameInput, { backgroundColor: inputBg, borderColor: inputBorder, color: inputText }]}
-              returnKeyType="next"
-            />
-
-            {/* Note */}
-            <Text style={[styles.sectionLabel, { color: subLabelColor, marginTop: 16 }]}>NOTE (optional)</Text>
-            <TextInput
-              value={note}
-              onChangeText={setNote}
-              placeholder="Add a note..."
-              placeholderTextColor={placeholder}
-              style={[styles.noteInput, { backgroundColor: inputBg, borderColor: inputBorder, color: inputText }]}
-              multiline
               returnKeyType="done"
-              blurOnSubmit
             />
 
-            {/* Color swatches */}
-            <Text style={[styles.sectionLabel, { color: subLabelColor, marginTop: 20 }]}>COLOUR</Text>
-            <View style={styles.swatchRow}>
-              {COLOR_SWATCHES.map((c) => (
-                <Pressable
-                  key={c}
-                  onPress={() => setColor(c)}
-                  style={[styles.swatchRing, { borderColor: color === c ? c : 'transparent' }]}
-                >
-                  <View style={[styles.swatch, { backgroundColor: c }]} />
-                </Pressable>
-              ))}
-            </View>
+            {/* Target */}
+            <Text style={[styles.sectionLabel, { color: subLabelColor, marginTop: 20 }]}>TARGET</Text>
+            <TargetPicker value={targetPicker} onChange={setTargetPicker} />
 
             {/* CTA */}
             <Pressable
@@ -268,7 +222,6 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
                 {isEditMode ? 'Save Changes' : 'Add Habit'}
               </Text>
             </Pressable>
-
           </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
@@ -326,9 +279,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  emojiScrollFlex: {
-    flex: 1,
-  },
+  emojiScrollFlex: { flex: 1 },
   emojiScroll: {
     flexDirection: 'row',
     gap: 8,
@@ -366,34 +317,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontFamily: 'DMSans_700Bold',
     fontSize: 16,
-  },
-  noteInput: {
-    borderRadius: 12,
-    borderWidth: 1.5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 14,
-    minHeight: 72,
-    textAlignVertical: 'top',
-  },
-  swatchRow: {
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  swatchRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  swatch: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
   },
   ctaBtn: {
     marginTop: 24,

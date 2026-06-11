@@ -5,11 +5,20 @@ import Svg, { Circle, Polyline } from 'react-native-svg';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { Habit } from '@/stores/habitStore';
 import { StreakFlame } from '@/components/StreakFlame';
+import { TargetProgressBar } from '@/components/TargetProgressBar';
+
+interface TargetProgressInfo {
+  current: number;
+  target: number;
+  label: string;
+  reached: boolean;
+}
 
 interface HabitCardProps {
   habit: Habit;
   isCompleted: boolean;
   streakCount: number;
+  targetProgress?: TargetProgressInfo;
   onToggle: () => void;
   onPress?: () => void;
   entranceIndex: number;
@@ -20,6 +29,7 @@ export function HabitCard({
   habit,
   isCompleted,
   streakCount,
+  targetProgress,
   onToggle,
   onPress,
   entranceIndex,
@@ -102,7 +112,7 @@ export function HabitCard({
           <Text style={styles.emojiText}>{habit.emoji}</Text>
         </View>
 
-        {/* Middle: name + streak */}
+        {/* Middle: name + streak + target progress */}
         <View style={styles.middle}>
           <Text style={[styles.habitName, { color: nameColor }]} numberOfLines={1}>
             {habit.name}
@@ -113,6 +123,14 @@ export function HabitCard({
               {streakCount > 0 ? `${streakCount} day streak` : 'Start your streak!'}
             </Text>
           </View>
+          {targetProgress && targetProgress.target > 0 && (
+            <TargetProgressBar
+              current={targetProgress.current}
+              target={targetProgress.target}
+              label={targetProgress.label}
+              reached={targetProgress.reached}
+            />
+          )}
         </View>
 
         {/* Completion ring */}

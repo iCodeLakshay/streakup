@@ -12,7 +12,7 @@ import {
   type DbCompletion,
   type DbFreeze,
 } from './db';
-import type { Habit, Completion, Freeze } from '@/stores/habitStore';
+import type { Habit, Completion, Freeze, TargetType } from '@/stores/habitStore';
 
 // ── Habits ────────────────────────────────────────────────────────────────────
 
@@ -71,6 +71,9 @@ function rowToHabit(row: DbHabit): Habit {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     serverId: row.serverId ?? undefined,
+    targetType: row.targetType as TargetType,
+    targetValue: row.targetValue,
+    targetCompletedAt: row.targetCompletedAt ?? null,
   };
 }
 
@@ -84,6 +87,9 @@ function habitToRow(h: Habit): DbHabit {
     createdAt: h.createdAt,
     updatedAt: h.updatedAt,
     serverId: h.serverId ?? null,
+    targetType: h.targetType,
+    targetValue: h.targetValue,
+    targetCompletedAt: h.targetCompletedAt,
   };
 }
 

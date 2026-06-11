@@ -28,8 +28,42 @@ export function getTodayCompletions(completions: Completion[]): Completion[] {
 export function getStreakCount(
   habitId: string,
   completions: Completion[],
-  freezes: Freeze[] = []
+  freezes: Freeze[] = [],
+  habit?: { targetType: string; targetValue: number }
 ): number {
+  // total: just count all completions
+  if (habit?.targetType === 'total') {
+    return completions.filter((c) => c.habitId === habitId).length;
+  }
+
+  // weekdays: walk backward through only the selected days (bitmask)
+  if (habit?.targetType === 'weekdays') {
+    const selectedDays = [0, 1, 2, 3, 4, 5, 6].filter(
+      (i) => habit.targetValue & (1 << i)
+    ); // 0=Sun,1=Mon,...,6=Sat
+    const completedDates = new Set(
+      completions.filter((c) => c.habitId === habitId).map((c) => c.date)
+    );
+    const todayWd = getTodayDateString();
+    let wdStreak = 0;
+    let wdCursor = todayWd;
+    // Walk back up to 365 days to bound the loop
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(wdCursor + 'T00:00:00');
+      const dow = d.getDay(); // 0=Sun
+      if (selectedDays.includes(dow)) {
+        if (completedDates.has(wdCursor)) {
+          wdStreak++;
+        } else {
+          break;
+        }
+      }
+      wdCursor = offsetDateStr(wdCursor, -1);
+    }
+    return wdStreak;
+  }
+
+  // streak / weekly_frequency / undefined: existing consecutive-day logic
   const today = getTodayDateString();
   const dates = new Set([
     ...completions.filter((c) => c.habitId === habitId).map((c) => c.date),

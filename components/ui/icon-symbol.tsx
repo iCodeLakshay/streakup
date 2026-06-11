@@ -22,6 +22,7 @@ const MAPPING = {
   'chart.bar.fill': 'bar-chart',
   'gearshape.fill': 'settings',
   'person.fill': 'person',
+  'trophy.fill': 'emoji-events',
 } as IconMapping;
 
 /**

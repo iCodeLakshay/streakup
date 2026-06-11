@@ -1,4 +1,4 @@
-import * as Haptics from 'expo-haptics';
+import * as Haptics from 'expo-haptics'; // used in handleToggle
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated, Easing, FlatList, Image, ListRenderItem, Pressable,
@@ -10,13 +10,16 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { router, useFocusEffect } from 'expo-router';
 import { pull } from '@/services/syncService';
 import {
-  useHabitStore, getTodayDateString, getStreakCount,
+  useHabitStore, getTodayDateString, getStreakCount, getTargetProgress,
   type Habit, type Completion, type Freeze,
 } from '@/stores/habitStore';
 import { HabitCard } from '@/components/HabitCard';
 import { AddHabitSheet } from '@/components/AddHabitSheet';
+import { TargetReachedModal } from '@/components/TargetReachedModal';
+import { FullScreenConfetti } from '@/components/FullScreenConfetti';
 import { useAuthStore } from '@/stores/authStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useUIStore } from '@/stores/uiStore';
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -48,14 +51,6 @@ function FlameIcon({ size = 80 }: { size?: number }) {
       </Defs>
       <Path d="M12 2c0 6-6 8-6 14a6 6 0 0 0 12 0c0-6-6-8-6-14z" fill="url(#fg)" stroke="none" />
       <Path d="M12 11c0 3-2 4-2 6a2 2 0 0 0 4 0c0-2-2-3-2-6z" fill="white" fillOpacity={0.35} stroke="none" />
-    </Svg>
-  );
-}
-
-function PlusIcon({ size = 26 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round">
-      <Path d="M12 5v14M5 12h14" />
     </Svg>
   );
 }
@@ -175,8 +170,6 @@ function CelebrationBanner({ habits, completions, freezes }: { habits: Habit[]; 
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-const CONFETTI_COLORS = ['#FF740D', '#FFD700', '#FF3B30', '#34C759', '#FFFFFF'];
-
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -188,24 +181,22 @@ export default function HomeScreen() {
   const addHabit = useHabitStore((s) => s.addHabit);
   const toggleCompletion = useHabitStore((s) => s.toggleCompletion);
 
-  const [sheetVisible, setSheetVisible] = useState(false);
+  const editHabit   = useHabitStore((s) => s.editHabit);
+  const removeHabit = useHabitStore((s) => s.removeHabit);
+
+  const addHabitOpen  = useUIStore((s) => s.addHabitOpen);
+  const closeAddHabit = useUIStore((s) => s.closeAddHabit);
+
   const [toastHabitId, setToastHabitId] = useState<string | null>(null);
+  const [targetModalHabitId, setTargetModalHabitId] = useState<string | null>(null);
 
   const toastY = useRef(new Animated.Value(-90)).current;
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const headerFade = useRef(new Animated.Value(0)).current;
   const headerY = useRef(new Animated.Value(8)).current;
-  const fabScale = useRef(new Animated.Value(0.7)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
-  const confettiPieces = useRef(
-    Array.from({ length: 14 }, (_, i) => ({
-      x: new Animated.Value(0),
-      y: new Animated.Value(0),
-      opacity: new Animated.Value(0),
-      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-    }))
-  ).current;
+  const [confettiActive, setConfettiActive] = useState(false);
 
   const today = getTodayDateString();
   const completedIds = useMemo(
@@ -238,11 +229,6 @@ export default function HomeScreen() {
     Animated.parallel([
       Animated.timing(headerFade, { toValue: 1, duration: 400, delay: 60, easing: Easing.out(Easing.ease), useNativeDriver: true }),
       Animated.timing(headerY, { toValue: 0, duration: 400, delay: 60, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-      Animated.sequence([
-        Animated.delay(450),
-        Animated.timing(fabScale, { toValue: 1.08, duration: 200, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        Animated.timing(fabScale, { toValue: 1, duration: 150, useNativeDriver: true }),
-      ]),
     ]).start();
   }, []);
 
@@ -252,24 +238,17 @@ export default function HomeScreen() {
     Animated.timing(progressAnim, { toValue: ratio, duration: 400, easing: Easing.out(Easing.ease), useNativeDriver: false }).start();
   }, [doneCount, totalCount]);
 
-  // Confetti
-  const burstConfetti = useCallback(() => {
-    confettiPieces.forEach((piece, i) => {
-      const angle = (i / confettiPieces.length) * Math.PI * 2;
-      const dist = 90 + (i % 3) * 30;
-      piece.x.setValue(0); piece.y.setValue(0); piece.opacity.setValue(1);
-      Animated.parallel([
-        Animated.timing(piece.x, { toValue: Math.cos(angle) * dist, duration: 700, useNativeDriver: true }),
-        Animated.timing(piece.y, { toValue: Math.sin(angle) * dist - 60, duration: 700, useNativeDriver: true }),
-        Animated.timing(piece.opacity, { toValue: 0, duration: 700, delay: 280, useNativeDriver: true }),
-      ]).start();
-    });
-  }, []);
-
+  // Full-screen confetti on Perfect Day (all habits complete)
   useEffect(() => {
-    if (screenState === 'all-complete' && prevScreenState.current !== 'all-complete') burstConfetti();
+    const justCompletedAll =
+      screenState === 'all-complete' && prevScreenState.current !== 'all-complete';
     prevScreenState.current = screenState;
-  }, [screenState, burstConfetti]);
+    if (justCompletedAll) {
+      setConfettiActive(true);
+      const t = setTimeout(() => setConfettiActive(false), 3500);
+      return () => clearTimeout(t);
+    }
+  }, [screenState]);
 
   // Toast
   const showToast = useCallback((habitId: string) => {
@@ -287,18 +266,34 @@ export default function HomeScreen() {
   const handleToggle = useCallback((habitId: string) => {
     const wasCompleted = completedIds.has(habitId);
     toggleCompletion(habitId, today);
-    if (!wasCompleted) showToast(habitId);
-  }, [completedIds, today, toggleCompletion, showToast]);
+    if (!wasCompleted) {
+      showToast(habitId);
+      // Check if toggling just reached the target (after optimistic update, compute with +1 completion)
+      const habit = habits.find(h => h.id === habitId);
+      if (habit && !habit.targetCompletedAt) {
+        // We add a synthetic completion for the check since state is async
+        const syntheticCompletion = { id: `${habitId}-${today}`, habitId, date: today };
+        const allCompletions = [...completions, syntheticCompletion];
+        const progress = getTargetProgress(habitId, allCompletions, freezes, habits);
+        if (progress.reached) {
+          setTargetModalHabitId(habitId);
+          editHabit(habitId, { targetCompletedAt: new Date().toISOString() });
+        }
+      }
+    }
+  }, [completedIds, today, toggleCompletion, showToast, habits, completions, freezes, editHabit]);
 
   const renderItem: ListRenderItem<ListItem> = useCallback(({ item }) => {
     if (item.type === 'divider') return <SectionDivider isDark={isDark} />;
     if (item.type === 'celebration') return <CelebrationBanner habits={habits} completions={completions} freezes={freezes} />;
     const habitIdx = habits.findIndex((h) => h.id === item.habit.id);
+    const targetProgress = getTargetProgress(item.habit.id, completions, freezes, habits);
     return (
       <HabitCard
         habit={item.habit}
         isCompleted={item.isCompleted}
         streakCount={getStreakCount(item.habit.id, completions, freezes)}
+        targetProgress={targetProgress}
         onToggle={() => handleToggle(item.habit.id)}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onPress={() => router.push({ pathname: '/habit/[id]', params: { id: item.habit.id } } as any)}
@@ -306,7 +301,7 @@ export default function HomeScreen() {
         dimmed={item.dimmed}
       />
     );
-  }, [habits, completions, isDark, handleToggle]);
+  }, [habits, completions, freezes, isDark, handleToggle]);
 
   const { user }                            = useAuthStore();
   const { displayName, avatarUri, lastSyncAt } = useSettingsStore();
@@ -371,40 +366,40 @@ export default function HomeScreen() {
       {/* Toast */}
       <ToastBanner habit={toastHabit} streakCount={toastStreak} translateY={toastY} topOffset={insets.top + 8} />
 
-      {/* Confetti overlay */}
+      {/* Full-screen confetti overlay (Perfect Day) */}
       <View style={[StyleSheet.absoluteFill, styles.confettiOverlay]} pointerEvents="none">
-        {confettiPieces.map((piece, i) => (
-          <Animated.View
-            key={i}
-            style={[
-              styles.confettiPiece,
-              {
-                backgroundColor: piece.color,
-                opacity: piece.opacity,
-                left: '50%',
-                top: '25%',
-                transform: [{ translateX: piece.x }, { translateY: piece.y }],
-              },
-            ]}
-          />
-        ))}
+        <FullScreenConfetti active={confettiActive} />
       </View>
 
-      {/* FAB */}
-      <Animated.View style={[styles.fabWrap, { bottom: insets.bottom + 58, transform: [{ scale: fabScale }] }]}>
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            setSheetVisible(true);
-          }}
-          style={styles.fab}
-        >
-          <PlusIcon size={28} />
-        </Pressable>
-      </Animated.View>
+      {/* Sheet — opened by FAB in tab bar via uiStore */}
+      <AddHabitSheet visible={addHabitOpen} onClose={closeAddHabit} onAdd={addHabit} />
 
-      {/* Sheet */}
-      <AddHabitSheet visible={sheetVisible} onClose={() => setSheetVisible(false)} onAdd={addHabit} />
+      {/* Target reached celebration */}
+      {(() => {
+        const targetHabit = targetModalHabitId ? habits.find(h => h.id === targetModalHabitId) : null;
+        if (!targetHabit) return null;
+        return (
+          <TargetReachedModal
+            visible={!!targetModalHabitId}
+            habitName={targetHabit.name}
+            habitEmoji={targetHabit.emoji}
+            targetType={targetHabit.targetType}
+            targetValue={targetHabit.targetValue}
+            onArchive={() => {
+              setTargetModalHabitId(null);
+              removeHabit(targetHabit.id);
+            }}
+            onSetNewTarget={(newValue) => {
+              setTargetModalHabitId(null);
+              editHabit(targetHabit.id, {
+                targetValue: newValue,
+                targetCompletedAt: null,
+              });
+            }}
+            onDismiss={() => setTargetModalHabitId(null)}
+          />
+        );
+      })()}
     </View>
   );
 }
@@ -520,11 +515,4 @@ const styles = StyleSheet.create({
   celebPillText: { fontFamily: 'DMSans_700Bold', fontSize: 11.5, color: '#FFFFFF' },
 
   confettiOverlay: { zIndex: 50 },
-  confettiPiece: { position: 'absolute', width: 8, height: 8, borderRadius: 2 },
-
-  fabWrap: { position: 'absolute', right: 20 },
-  fab: {
-    width: 62, height: 62, borderRadius: 31, backgroundColor: '#FF740D',
-    alignItems: 'center', justifyContent: 'center',
-  },
 });

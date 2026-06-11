@@ -8,7 +8,7 @@ async function getDb(): Promise<SQLite.SQLiteDatabase> {
   return _db;
 }
 
-const CURRENT_SCHEMA_VERSION = 3;
+const CURRENT_SCHEMA_VERSION = 4;
 
 export async function initDb(): Promise<void> {
   const db = await getDb();
@@ -48,6 +48,14 @@ export async function initDb(): Promise<void> {
     await db.execAsync(`ALTER TABLE habits ADD COLUMN serverId TEXT;`);
   }
   // v3: freezes table already created above via IF NOT EXISTS
+  if (version < 4) {
+    await db.execAsync(`
+      ALTER TABLE habits ADD COLUMN targetType TEXT NOT NULL DEFAULT 'streak';
+      ALTER TABLE habits ADD COLUMN targetValue INTEGER NOT NULL DEFAULT 30;
+      ALTER TABLE habits ADD COLUMN targetCompletedAt TEXT;
+    `);
+    await db.execAsync('PRAGMA user_version = 4');
+  }
   if (version < CURRENT_SCHEMA_VERSION) {
     await db.execAsync(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION};`);
   }
@@ -63,18 +71,20 @@ export async function dbGetAllHabits(): Promise<DbHabit[]> {
 export async function dbInsertHabit(habit: DbHabit): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT OR REPLACE INTO habits (id, name, emoji, color, note, createdAt, updatedAt, serverId)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO habits (id, name, emoji, color, note, createdAt, updatedAt, serverId, targetType, targetValue, targetCompletedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [habit.id, habit.name, habit.emoji, habit.color, habit.note ?? null,
-     habit.createdAt, habit.updatedAt, habit.serverId ?? null]
+     habit.createdAt, habit.updatedAt, habit.serverId ?? null,
+     habit.targetType, habit.targetValue, habit.targetCompletedAt ?? null]
   );
 }
 
 export async function dbUpdateHabit(habit: DbHabit): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `UPDATE habits SET name=?, emoji=?, color=?, note=?, updatedAt=?, serverId=? WHERE id=?`,
-    [habit.name, habit.emoji, habit.color, habit.note ?? null, habit.updatedAt, habit.serverId ?? null, habit.id]
+    `UPDATE habits SET name=?, emoji=?, color=?, note=?, updatedAt=?, serverId=?, targetType=?, targetValue=?, targetCompletedAt=? WHERE id=?`,
+    [habit.name, habit.emoji, habit.color, habit.note ?? null, habit.updatedAt, habit.serverId ?? null,
+     habit.targetType, habit.targetValue, habit.targetCompletedAt ?? null, habit.id]
   );
 }
 
@@ -141,6 +151,9 @@ export interface DbHabit {
   createdAt: string;
   updatedAt: string;
   serverId?: string | null;
+  targetType: string;
+  targetValue: number;
+  targetCompletedAt: string | null;
 }
 
 export interface DbCompletion {
