@@ -1,25 +1,15 @@
 import { useState, useRef } from 'react';
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable,
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useSettingsStore } from '@/stores/settingsStore';
-
-function GoogleIcon() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 48 48">
-      <Path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-      <Path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-      <Path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-      <Path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
-    </Svg>
-  );
-}
 
 function BackChevron({ color }: { color: string }) {
   return (
@@ -83,8 +73,17 @@ export default function SignUpScreen() {
   const canSubmit = nickname.trim().length > 0 && email.trim().length > 0 && password.length >= 6 && confirmPassword.length > 0;
 
   const handleRegister = async () => {
+    if (isLoading) return;
     setLocalError('');
     clearError();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setLocalError('Enter a valid email address.');
+      return;
+    }
+    if (password.length < 6) {
+      setLocalError('Password must be at least 6 characters.');
+      return;
+    }
     if (password !== confirmPassword) {
       setLocalError('Passwords do not match.');
       return;
@@ -139,6 +138,7 @@ export default function SignUpScreen() {
             <View style={styles.fieldWrap}>
               <Text style={[styles.fieldLabel, { color: textMuted }]}>YOUR NAME</Text>
               <TextInput
+                testID="nickname-input"
                 value={nickname}
                 onChangeText={(t) => { setNickname(t); setLocalError(''); }}
                 placeholder="What should we call you?"
@@ -156,6 +156,7 @@ export default function SignUpScreen() {
             <View style={styles.fieldWrap}>
               <Text style={[styles.fieldLabel, { color: textMuted }]}>EMAIL</Text>
               <TextInput
+                testID="email-input"
                 ref={emailRef}
                 value={email}
                 onChangeText={(t) => { setEmail(t); clearError(); setLocalError(''); }}
@@ -175,6 +176,7 @@ export default function SignUpScreen() {
               <Text style={[styles.fieldLabel, { color: textMuted }]}>PASSWORD</Text>
               <View style={[styles.inputWrap, { backgroundColor: surface1, borderColor: border }]}>
                 <TextInput
+                  testID="password-input"
                   ref={passwordRef}
                   value={password}
                   onChangeText={(t) => { setPassword(t); clearError(); setLocalError(''); }}
@@ -186,7 +188,11 @@ export default function SignUpScreen() {
                   style={[styles.inputInner, { color: textPri }]}
                 />
                 <Pressable onPress={() => setShowPassword(v => !v)} hitSlop={8} style={styles.eyeBtn}>
-                  <Text style={[styles.eyeText, { color: textSec }]}>{showPassword ? 'Hide' : 'Show'}</Text>
+                  <MaterialIcons
+                    name={showPassword ? 'visibility-off' : 'visibility'}
+                    size={20}
+                    color={textSec}
+                  />
                 </Pressable>
               </View>
               {/* Strength bar */}
@@ -217,6 +223,7 @@ export default function SignUpScreen() {
               <Text style={[styles.fieldLabel, { color: textMuted }]}>CONFIRM PASSWORD</Text>
               <View style={[styles.inputWrap, { backgroundColor: surface1, borderColor: border }]}>
                 <TextInput
+                  testID="confirm-password-input"
                   ref={confirmRef}
                   value={confirmPassword}
                   onChangeText={(t) => { setConfirmPassword(t); setLocalError(''); }}
@@ -228,13 +235,18 @@ export default function SignUpScreen() {
                   style={[styles.inputInner, { color: textPri }]}
                 />
                 <Pressable onPress={() => setShowConfirm(v => !v)} hitSlop={8} style={styles.eyeBtn}>
-                  <Text style={[styles.eyeText, { color: textSec }]}>{showConfirm ? 'Hide' : 'Show'}</Text>
+                  <MaterialIcons
+                    name={showConfirm ? 'visibility-off' : 'visibility'}
+                    size={20}
+                    color={textSec}
+                  />
                 </Pressable>
               </View>
             </View>
 
             {/* Create Account CTA */}
             <Pressable
+              testID="create-account-btn"
               onPress={handleRegister}
               disabled={!canSubmit || isLoading}
               style={({ pressed }) => [
@@ -247,25 +259,6 @@ export default function SignUpScreen() {
                 ? <ActivityIndicator color={canSubmit ? '#FFFFFF' : textMuted} />
                 : <Text style={[styles.ctaText, { color: canSubmit ? '#FFFFFF' : textMuted }]}>Create Account</Text>
               }
-            </Pressable>
-
-            {/* Divider */}
-            <View style={styles.dividerRow}>
-              <View style={[styles.dividerLine, { backgroundColor: border }]} />
-              <Text style={[styles.dividerLabel, { color: textMuted }]}>or</Text>
-              <View style={[styles.dividerLine, { backgroundColor: border }]} />
-            </View>
-
-            {/* Google button */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.googleBtn,
-                { backgroundColor: surface1, borderColor: border, opacity: pressed ? 0.80 : 1 },
-              ]}
-              onPress={() => Alert.alert('Coming soon', 'Google sign-in is not available yet.')}
-            >
-              <GoogleIcon />
-              <Text style={[styles.googleText, { color: textPri }]}>Continue with Google</Text>
             </Pressable>
 
           </View>
@@ -390,32 +383,6 @@ const styles = StyleSheet.create({
   ctaText: {
     fontFamily: 'DMSans_700Bold',
     fontSize: 16,
-  },
-
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginVertical: 4,
-  },
-  dividerLine: { flex: 1, height: 1 },
-  dividerLabel: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 13,
-  },
-
-  googleBtn: {
-    height: 54,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  googleText: {
-    fontFamily: 'DMSans_500Medium',
-    fontSize: 15,
   },
 
   footerRow: {

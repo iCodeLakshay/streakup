@@ -4,7 +4,6 @@ import { Animated, Easing, GestureResponderEvent, Pressable, StyleSheet, Text, V
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, RadialGradient, Stop } from 'react-native-svg';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useAuthStore } from '@/stores/authStore';
 
 const SLIDES = [
   {
@@ -64,7 +63,6 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isDark = useColorScheme() === 'dark';
-  const { completeOnboarding } = useAuthStore();
 
   // ── Slide state ──────────────────────────────────────────────────────────
   const [activeIdx, setActiveIdx] = useState(0);
@@ -185,15 +183,6 @@ export default function OnboardingScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: isDark ? '#1A1A1A' : '#FFFFFF', paddingTop: insets.top, paddingBottom: insets.bottom }]}>
 
-      {/* Skip */}
-      <Animated.View style={[styles.skipWrap, anim(0)]}>
-        <Pressable onPress={async () => { await completeOnboarding(); router.replace('/(tabs)' as any); }} hitSlop={12} style={styles.skipBtn}>
-          {({ pressed }) => (
-            <Text style={[styles.skipText, { opacity: pressed ? 0.5 : 1 }]}>Skip</Text>
-          )}
-        </Pressable>
-      </Animated.View>
-
       {/* ── Middle: vertically centered ── */}
       <View
         style={styles.middle}
@@ -250,6 +239,7 @@ export default function OnboardingScreen() {
       {/* ── CTA pinned to bottom ── */}
       <Animated.View style={[styles.cta, anim(3)]}>
         <Pressable
+          testID="get-started-btn"
           onPress={() => router.push('/signup' as any)}
           style={({ pressed }) => [styles.getStartedBtn, pressed && styles.getStartedBtnPressed]}
         >
@@ -266,21 +256,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     overflow: 'hidden',
-  },
-  skipWrap: {
-    position: 'absolute',
-    top: 60,
-    right: 20,
-    zIndex: 10,
-  },
-  skipBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-  },
-  skipText: {
-    fontSize: 16,
-    fontFamily: 'DMSans_500Medium',
-    color: '#9E9E9E',
   },
   middle: {
     flex: 1,

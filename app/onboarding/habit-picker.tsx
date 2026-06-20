@@ -31,6 +31,7 @@ export default function HabitPickerScreen() {
   const [note, setNote] = useState('Start the day strong');
   const [selectedEmoji, setSelectedEmoji] = useState('🏃');
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const fadeAnims = useRef([0, 1, 2, 3, 4].map(() => new Animated.Value(0))).current;
   const slideAnims = useRef([0, 1, 2, 3, 4].map(() => new Animated.Value(10))).current;
@@ -61,14 +62,20 @@ export default function HabitPickerScreen() {
   const canCreate = habitName.trim().length > 0;
 
   const handleCreate = async () => {
-    if (!canCreate) return;
-    await addHabit({
-      name: habitName.trim(),
-      emoji: selectedEmoji,
-      color: '#FF740D',
-      note: note.trim(),
-    });
-    router.push('/onboarding/permissions' as any);
+    if (!canCreate || creating) return; // guard against double-taps
+    setCreating(true);
+    try {
+      await addHabit({
+        name: habitName.trim(),
+        emoji: selectedEmoji,
+        color: '#FF740D',
+        note: note.trim(),
+      });
+      router.push('/onboarding/permissions' as any);
+    } catch {
+      // Surface failure by re-enabling the button so the user can retry.
+      setCreating(false);
+    }
   };
 
   // Theme tokens
@@ -272,16 +279,17 @@ export default function HabitPickerScreen() {
       <Animated.View style={[styles.cta, { paddingBottom: insets.bottom + 24 }, animStyle(4)]}>
         <Pressable
           onPress={handleCreate}
-          disabled={!canCreate}
+          disabled={!canCreate || creating}
           style={({ pressed }) => [
             styles.ctaBtn,
             { backgroundColor: canCreate ? '#FF8C00' : ctaDisabledBg },
             canCreate && styles.ctaBtnShadow,
             pressed && canCreate && styles.ctaBtnPressed,
+            creating && { opacity: 0.8 },
           ]}
         >
           <Text style={[styles.ctaText, { color: canCreate ? '#FFFFFF' : ctaDisabledText }]}>
-            Create My First Habit
+            {creating ? 'Creating…' : 'Create My First Habit'}
           </Text>
         </Pressable>
       </Animated.View>

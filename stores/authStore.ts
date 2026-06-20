@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, ONBOARDING_KEY, getToken, setToken, clearToken } from '@/services/api';
+import { useHabitStore } from '@/stores/habitStore';
+import { useSettingsStore } from '@/stores/settingsStore';
+
+// Clear all device-local data belonging to a user. Called before a new account
+// is set (login/register) and on logout, so accounts never see each other's data.
+async function clearLocalUserData(): Promise<void> {
+  await Promise.all([
+    useHabitStore.getState().clearLocal(),
+    useSettingsStore.getState().resetUserData(),
+  ]);
+}
 
 export interface AuthUser {
   id: string;
@@ -63,8 +74,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
       const { token, user } = res.data;
       await setToken(token);
-      const onboarding = await AsyncStorage.getItem(ONBOARDING_KEY);
-      set({ user, onboardingComplete: onboarding === 'true', isLoading: false });
+      // New account on this device — drop any previous account's local data first.
+      await clearLocalUserData();
+      // Returning users have already onboarded; go straight to the app.
+      await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+      set({ user, onboardingComplete: true, isLoading: false });
     } catch (err) {
       set({ error: (err as Error).message, isLoading: false });
       throw err;
@@ -80,6 +94,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
       const { token, user } = res.data;
       await setToken(token);
+      // Brand-new account — ensure a clean local slate, then run onboarding.
+      await clearLocalUserData();
+      await AsyncStorage.removeItem(ONBOARDING_KEY);
       set({ user, onboardingComplete: false, isLoading: false });
     } catch (err) {
       set({ error: (err as Error).message, isLoading: false });
@@ -89,6 +106,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   logout: async () => {
     await clearToken();
+    await clearLocalUserData();
+    await AsyncStorage.removeItem(ONBOARDING_KEY);
     set({ user: null, onboardingComplete: false, error: null });
   },
 

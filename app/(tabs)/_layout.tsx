@@ -14,6 +14,7 @@ function CenterAddButton(_props: BottomTabBarButtonProps) {
   return (
     <View style={centerStyles.wrap}>
       <Pressable
+        testID="center-add-btn"
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           openAddHabit();
@@ -59,6 +60,13 @@ const centerStyles = StyleSheet.create({
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
+const tabLabelStyle = {
+  fontFamily: 'DMSans_500Medium',
+  fontSize: 10,
+  marginTop: 1,
+  includeFontPadding: false,
+} as const;
+
 export default function TabLayout() {
   const isDark = useColorScheme() === 'dark';
 
@@ -71,17 +79,24 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: isDark ? '#1A1A1A' : '#FFFFFF',
           borderTopColor: isDark ? '#2A2A2A' : '#F0F0F0',
-          height: 62,
+          height: 64,
           paddingBottom: 8,
           paddingTop: 6,
         },
+        tabBarLabelPosition: 'below-icon',
         tabBarLabelStyle: {
           fontFamily: 'DMSans_500Medium',
           fontSize: 10,
-          marginTop: 2,
+          marginTop: 1,
+          includeFontPadding: false,
         },
         tabBarIconStyle: {
           marginBottom: 0,
+        },
+        tabBarItemStyle: {
+          paddingHorizontal: 0,
+          minWidth: 48,
+          flex: 1,
         },
       }}
     >
@@ -90,6 +105,11 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color }) => <IconSymbol size={22} name="flame.fill" color={color} />,
+          tabBarLabel: ({ color }) => (
+            <Text style={[tabLabelStyle, { color }]} numberOfLines={1} allowFontScaling={false}>
+              Home
+            </Text>
+          ),
         }}
       />
       <Tabs.Screen
@@ -97,6 +117,11 @@ export default function TabLayout() {
         options={{
           title: 'Stats',
           tabBarIcon: ({ color }) => <IconSymbol size={22} name="chart.bar.fill" color={color} />,
+          tabBarLabel: ({ color }) => (
+            <Text style={[tabLabelStyle, { color }]} numberOfLines={1} allowFontScaling={false}>
+              Stats
+            </Text>
+          ),
         }}
       />
       {/* Center add button — no label, custom button component */}
@@ -114,6 +139,11 @@ export default function TabLayout() {
         options={{
           title: 'Badges',
           tabBarIcon: ({ color }) => <IconSymbol size={22} name="trophy.fill" color={color} />,
+          tabBarLabel: ({ color }) => (
+            <Text style={[tabLabelStyle, { color }]} numberOfLines={1} allowFontScaling={false}>
+              Badges
+            </Text>
+          ),
         }}
       />
       <Tabs.Screen
@@ -121,6 +151,11 @@ export default function TabLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color }) => <IconSymbol size={22} name="gearshape.fill" color={color} />,
+          tabBarLabel: ({ color }) => (
+            <Text style={[tabLabelStyle, { color }]} numberOfLines={1} allowFontScaling={false}>
+              Settings
+            </Text>
+          ),
         }}
       />
     </Tabs>

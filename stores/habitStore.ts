@@ -10,6 +10,7 @@ import {
   getAllFreezes,
   insertFreeze,
 } from '@/services/habitService';
+import { dbClearAll } from '@/services/db';
 import {
   createHabitOnServer,
   updateHabitOnServer,
@@ -61,6 +62,7 @@ interface HabitStore {
   freezes: Freeze[];
   isHydrated: boolean;
   hydrate: () => Promise<void>;
+  clearLocal: () => Promise<void>;
   addHabit: (h: Omit<Habit, 'id' | 'createdAt' | 'updatedAt' | 'serverId' | 'targetType' | 'targetValue' | 'targetCompletedAt'> & {
     targetType?: TargetType;
     targetValue?: number;
@@ -89,6 +91,17 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
     } catch {
       set({ isHydrated: true });
     }
+  },
+
+  // Wipe all local habit data (SQLite + memory). Used on logout / account switch
+  // so a new account never sees the previous one's habits.
+  clearLocal: async () => {
+    try {
+      await dbClearAll();
+    } catch {
+      // best-effort
+    }
+    set({ habits: [], completions: [], freezes: [] });
   },
 
   addHabit: async (h) => {

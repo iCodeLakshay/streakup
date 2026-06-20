@@ -26,7 +26,8 @@ export function setOnUnauthorized(fn: (() => void) | null): void {
 
 export const api = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:5000/api/v1',
-  timeout: 10000,
+  // 30s so a cold-starting (free-tier) backend doesn't fail the first request.
+  timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -41,7 +42,13 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
-    if (err.response?.status === 401) {
+    // A 401 from the auth endpoints means "wrong credentials" — surface it as a
+    // form error. Only a 401 on an *authenticated* request means the session
+    // expired, which should clear the token and bounce to login.
+    const url: string = err.config?.url ?? '';
+    const isAuthRequest = url.includes('/auth/login') || url.includes('/auth/register');
+
+    if (err.response?.status === 401 && !isAuthRequest) {
       await clearToken();
       onUnauthorized?.();
     }

@@ -27,6 +27,7 @@ interface SettingsStore {
   notificationSlots: number[];
   isHydrated: boolean;
   hydrate: () => Promise<void>;
+  resetUserData: () => Promise<void>;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   setNotificationsEnabled: (enabled: boolean) => Promise<void>;
   setDisplayName: (name: string) => Promise<void>;
@@ -109,6 +110,25 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     } catch {
       set({ isHydrated: true });
     }
+  },
+
+  // Clear user-identity data (name/avatar/sync/freezes) on logout or account
+  // switch. Device preferences (theme, notifications, slots) are intentionally kept.
+  resetUserData: async () => {
+    set({
+      displayName: '',
+      avatarUri: null,
+      lastSyncAt: null,
+      freezeCount: MAX_FREEZES,
+      lastFreezeReplenish: null,
+    });
+    await Promise.all([
+      AsyncStorage.removeItem(DNAME_KEY),
+      AsyncStorage.removeItem(AVATAR_KEY),
+      AsyncStorage.removeItem(LAST_SYNC_KEY),
+      AsyncStorage.removeItem(FREEZE_COUNT_KEY),
+      AsyncStorage.removeItem(FREEZE_REPLENISH_KEY),
+    ]).catch(() => {});
   },
 
   setThemeMode: async (mode) => {

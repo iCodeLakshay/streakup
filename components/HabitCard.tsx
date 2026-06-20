@@ -96,6 +96,7 @@ export function HabitCard({
       ]}
     >
       <Pressable
+        testID={`habit-card-${habit.id}`}
         style={({ pressed }) => [
           styles.card,
           {
@@ -134,7 +135,7 @@ export function HabitCard({
         </View>
 
         {/* Completion ring */}
-        <Pressable style={styles.ringTarget} onPress={handleToggle} hitSlop={4}>
+        <Pressable testID={`habit-toggle-${habit.id}`} style={styles.ringTarget} onPress={handleToggle} hitSlop={4}>
           <Animated.View style={{ transform: [{ scale: ringScale }] }}>
             {isCompleted ? (
               <Svg width={24} height={24} viewBox="0 0 24 24">

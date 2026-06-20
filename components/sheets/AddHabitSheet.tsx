@@ -37,9 +37,12 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
 
   const slideY = useRef(new Animated.Value(700)).current;
   const bgOpacity = useRef(new Animated.Value(0)).current;
+  // Prevents a rapid double-tap from submitting twice before the sheet closes.
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (visible) {
+      submittingRef.current = false;
       if (habitToEdit) {
         setName(habitToEdit.name);
         setEmoji(habitToEdit.emoji);
@@ -70,7 +73,8 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
   const canSubmit = name.trim().length > 0;
 
   const handleSubmit = () => {
-    if (!canSubmit) return;
+    if (!canSubmit || submittingRef.current) return;
+    submittingRef.current = true;
     const payload = {
       name: name.trim(),
       emoji,
@@ -195,6 +199,7 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
             {/* Name */}
             <Text style={[styles.sectionLabel, { color: subLabelColor, marginTop: 20 }]}>NAME</Text>
             <TextInput
+              testID="habit-name-input"
               value={name}
               onChangeText={setName}
               placeholder="Habit name"
@@ -210,6 +215,7 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
 
             {/* CTA */}
             <Pressable
+              testID="add-habit-btn"
               onPress={handleSubmit}
               disabled={!canSubmit}
               style={({ pressed }) => [

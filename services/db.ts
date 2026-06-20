@@ -61,6 +61,18 @@ export async function initDb(): Promise<void> {
   }
 }
 
+// ── Maintenance ─────────────────────────────────────────────────────────────
+
+/** Wipe all user data from local SQLite (used on logout / account switch). */
+export async function dbClearAll(): Promise<void> {
+  const db = await getDb();
+  await db.execAsync(`
+    DELETE FROM habits;
+    DELETE FROM completions;
+    DELETE FROM freezes;
+  `);
+}
+
 // ── Habits ────────────────────────────────────────────────────────────────────
 
 export async function dbGetAllHabits(): Promise<DbHabit[]> {

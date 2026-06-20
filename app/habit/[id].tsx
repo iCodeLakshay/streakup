@@ -92,8 +92,13 @@ export default function HabitDetailScreen() {
   const contentFade = useRef(new Animated.Value(0)).current;
   const contentY    = useRef(new Animated.Value(10)).current;
 
+  // Set when this screen initiates a delete/archive so the `!habit` guard below
+  // doesn't fire a SECOND navigation (which would pop two screens).
+  const deletedRef = useRef(false);
+
   useEffect(() => {
-    if (!habit) { router.back(); return; }
+    if (!habit && !deletedRef.current) { router.back(); return; }
+    if (!habit) return;
     Animated.parallel([
       Animated.timing(contentFade, {
         toValue: 1, duration: 320, delay: 60,
@@ -145,6 +150,7 @@ export default function HabitDetailScreen() {
 
   const handleDelete = async () => {
     setShowDeleteModal(false);
+    deletedRef.current = true;
     await removeHabit(habit.id);
     if (router.canGoBack()) {
       router.back();
@@ -332,6 +338,7 @@ export default function HabitDetailScreen() {
         targetValue={habit.targetValue}
         onArchive={() => {
           setShowTargetModal(false);
+          deletedRef.current = true;
           removeHabit(habit.id);
           if (router.canGoBack()) router.back();
           else router.replace('/(tabs)');

@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import {
   Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { TargetType } from '@/stores/habitStore';
+
+type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
 
 export interface TargetPickerValue {
   type: TargetType;
@@ -15,11 +18,11 @@ interface TargetPickerProps {
   onChange: (v: TargetPickerValue) => void;
 }
 
-const TYPE_OPTIONS: { type: TargetType; icon: string; label: string; desc: string }[] = [
-  { type: 'streak',           icon: '🔥', label: 'Streak',    desc: 'Hit a N-day streak' },
-  { type: 'total',            icon: '✅', label: 'Total',     desc: 'Complete N times' },
-  { type: 'weekdays',         icon: '📅', label: 'Weekdays',  desc: 'Only on selected days' },
-  { type: 'weekly_frequency', icon: '📊', label: 'Weekly',    desc: 'X days per week' },
+const TYPE_OPTIONS: { type: TargetType; icon: MaterialIconName; label: string; desc: string }[] = [
+  { type: 'streak',           icon: 'local-fire-department', label: 'Streak',    desc: 'Hit a N-day streak' },
+  { type: 'total',            icon: 'check-circle',          label: 'Total',     desc: 'Complete N times' },
+  { type: 'weekdays',         icon: 'calendar-today',        label: 'Weekdays',  desc: 'Only on selected days' },
+  { type: 'weekly_frequency', icon: 'bar-chart',             label: 'Weekly',    desc: 'X days per week' },
 ];
 
 const STREAK_PRESETS = [7, 21, 30, 66, 90];
@@ -106,9 +109,15 @@ export function TargetPicker({ value, onChange }: TargetPickerProps) {
                 },
               ]}
             >
-              <Text style={styles.typeIcon}>{opt.icon}</Text>
-              <Text style={[styles.typeLabel, { color: active ? primary : text }]}>{opt.label}</Text>
-              <Text style={[styles.typeDesc, { color: subText }]} numberOfLines={2}>{opt.desc}</Text>
+              <MaterialIcons
+                name={opt.icon}
+                size={24}
+                color={active ? primary : (isDark ? '#A8A6A0' : '#6A6762')}
+              />
+              <View style={styles.typeTextCol}>
+                <Text style={[styles.typeLabel, { color: active ? primary : text }]}>{opt.label}</Text>
+                <Text style={[styles.typeDesc, { color: subText }]} numberOfLines={2}>{opt.desc}</Text>
+              </View>
             </Pressable>
           );
         })}
@@ -217,11 +226,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
     padding: 12,
-    gap: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  typeIcon: { fontSize: 22 },
+  typeTextCol: { flex: 1, gap: 2 },
   typeLabel: { fontFamily: 'DMSans_700Bold', fontSize: 14 },
-  typeDesc: { fontFamily: 'DMSans_400Regular', fontSize: 11.5, lineHeight: 16 },
+  typeDesc: { fontFamily: 'DMSans_400Regular', fontSize: 11.5, lineHeight: 15 },
   dayRow: {
     flexDirection: 'row',
     gap: 8,
