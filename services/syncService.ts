@@ -121,10 +121,14 @@ export async function pull(since: string | null): Promise<void> {
     const { habits: localHabits, completions: localCompletions } = habitStore().getState();
 
     // ── Merge habits (last-write-wins) ──────────────────────────────────────
+    // Index local habits by serverId once → O(1) lookups instead of findIndex.
     const updatedHabits = [...localHabits];
+    const idxByServerId = new Map<string, number>();
+    updatedHabits.forEach((h, i) => { if (h.serverId) idxByServerId.set(h.serverId, i); });
+
     for (const sh of serverHabits) {
-      const idx = updatedHabits.findIndex((h) => h.serverId === sh._id);
-      if (idx !== -1) {
+      const idx = idxByServerId.get(sh._id);
+      if (idx !== undefined) {
         // Exists locally — update if server is newer
         if (sh.updatedAt > updatedHabits[idx].updatedAt) {
           updatedHabits[idx] = {
@@ -149,31 +153,33 @@ export async function pull(since: string | null): Promise<void> {
     const habitsAfterDeletion = updatedHabits.filter((h) => !h.serverId || !deletedServerIds.has(h.serverId));
 
     // ── Merge completions (additive — server completions union with local) ──
+    // Pre-build lookups: serverId → local habit, and a Set of existing
+    // "habitId|date" keys → linear merge instead of O(completions²).
+    const habitByServerId = new Map<string, Habit>();
+    for (const h of habitsAfterDeletion) { if (h.serverId) habitByServerId.set(h.serverId, h); }
+
     const updatedCompletions = [...localCompletions];
+    const completionKeys = new Set(updatedCompletions.map((c) => `${c.habitId}|${c.date}`));
+
     for (const sc of serverCompletions) {
-      const localHabit = habitsAfterDeletion.find((h) => h.serverId === sc.habitId);
+      const localHabit = habitByServerId.get(sc.habitId);
       if (!localHabit) continue;
-      const alreadyExists = updatedCompletions.some(
-        (c) => c.habitId === localHabit.id && c.date === sc.date
-      );
-      if (!alreadyExists) {
-        const completion: Completion = {
-          id: `${localHabit.id}-${sc.date}`,
-          habitId: localHabit.id,
-          date: sc.date,
-        };
-        updatedCompletions.push(completion);
-        // Persist to SQLite directly — do NOT call toggleCompletion (would re-sync)
-        await dbInsertCompletion({ id: completion.id, habitId: completion.habitId, date: completion.date });
-      }
+      const key = `${localHabit.id}|${sc.date}`;
+      if (completionKeys.has(key)) continue;
+      completionKeys.add(key);
+      const completion: Completion = {
+        id: `${localHabit.id}-${sc.date}`,
+        habitId: localHabit.id,
+        date: sc.date,
+      };
+      updatedCompletions.push(completion);
+      // Persist to SQLite directly — do NOT call toggleCompletion (would re-sync)
+      await dbInsertCompletion({ id: completion.id, habitId: completion.habitId, date: completion.date });
     }
 
-    // Remove completions for deleted habits
-    const filteredCompletions = updatedCompletions.filter(
-      (c) => !deletedServerIds.has(
-        habitsAfterDeletion.find((h) => h.id === c.habitId)?.serverId ?? ''
-      )
-    );
+    // Drop completions whose habit no longer exists locally (e.g. deleted) — O(1) per item.
+    const remainingHabitIds = new Set(habitsAfterDeletion.map((h) => h.id));
+    const filteredCompletions = updatedCompletions.filter((c) => remainingHabitIds.has(c.habitId));
 
     // Apply merged state in one shot
     habitStore().setState({

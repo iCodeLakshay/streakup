@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api, TOKEN_KEY, ONBOARDING_KEY } from '@/services/api';
+import { api, ONBOARDING_KEY, getToken, setToken, clearToken } from '@/services/api';
 
 export interface AuthUser {
   id: string;
@@ -34,7 +34,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   hydrate: async () => {
     try {
       const [token, onboarding] = await Promise.all([
-        AsyncStorage.getItem(TOKEN_KEY),
+        getToken(),
         AsyncStorage.getItem(ONBOARDING_KEY),
       ]);
       if (token) {
@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
     } catch {
       // Token invalid or expired — clear it
-      await AsyncStorage.removeItem(TOKEN_KEY);
+      await clearToken();
       set({ user: null, isHydrated: true });
     }
   },
@@ -62,7 +62,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         password,
       });
       const { token, user } = res.data;
-      await AsyncStorage.setItem(TOKEN_KEY, token);
+      await setToken(token);
       const onboarding = await AsyncStorage.getItem(ONBOARDING_KEY);
       set({ user, onboardingComplete: onboarding === 'true', isLoading: false });
     } catch (err) {
@@ -79,7 +79,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         password,
       });
       const { token, user } = res.data;
-      await AsyncStorage.setItem(TOKEN_KEY, token);
+      await setToken(token);
       set({ user, onboardingComplete: false, isLoading: false });
     } catch (err) {
       set({ error: (err as Error).message, isLoading: false });
@@ -88,7 +88,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   logout: async () => {
-    await AsyncStorage.multiRemove([TOKEN_KEY]);
+    await clearToken();
     set({ user: null, onboardingComplete: false, error: null });
   },
 

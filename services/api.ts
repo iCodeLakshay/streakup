@@ -1,8 +1,21 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
-export const TOKEN_KEY = '@streakup/token';
+// SecureStore keys must be alphanumeric + ".", "-", "_" (no "@" or "/").
+export const TOKEN_KEY = 'streakup_token';
 export const ONBOARDING_KEY = '@streakup/onboarding-complete';
+
+// The JWT is stored in the device keychain/keystore (encrypted at rest) via
+// expo-secure-store — never in plaintext AsyncStorage.
+export async function getToken(): Promise<string | null> {
+  return SecureStore.getItemAsync(TOKEN_KEY);
+}
+export async function setToken(token: string): Promise<void> {
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
+}
+export async function clearToken(): Promise<void> {
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
+}
 
 // Registered by a React component so api.ts never imports the store/router
 // (avoids circular deps / navigation-outside-React).
@@ -19,7 +32,7 @@ export const api = axios.create({
 
 // Attach JWT to every request
 api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem(TOKEN_KEY);
+  const token = await getToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -29,7 +42,7 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     if (err.response?.status === 401) {
-      await AsyncStorage.removeItem(TOKEN_KEY);
+      await clearToken();
       onUnauthorized?.();
     }
     const message: string =
