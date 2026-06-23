@@ -74,8 +74,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
       const { token, user } = res.data;
       await setToken(token);
-      // New account on this device — drop any previous account's local data first.
-      await clearLocalUserData();
+      // Only wipe local data when a *different* account is logging in.
+      // If prevUser is null, logout() already called clearLocalUserData() — skip it.
+      const prevUser = get().user;
+      if (prevUser && prevUser.id !== user.id) {
+        await clearLocalUserData();
+      }
       // Returning users have already onboarded; go straight to the app.
       await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
       set({ user, onboardingComplete: true, isLoading: false });

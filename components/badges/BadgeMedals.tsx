@@ -8,6 +8,8 @@
  * Gradient <Defs> ids are suffixed with a per-instance `uid` so multiple medals
  * can render on the same screen without id collisions.
  */
+import { useEffect, useRef } from 'react';
+import { Animated } from 'react-native';
 import Svg, {
   Circle,
   Defs,
@@ -125,9 +127,20 @@ interface BadgeMedalProps {
   id: BadgeId;
   size: number;
   locked?: boolean;
+  isNew?: boolean;
 }
 
-export function BadgeMedal({ id, size, locked = false }: BadgeMedalProps) {
+export function BadgeMedal({ id, size, locked = false, isNew = false }: BadgeMedalProps) {
+  const scale = useRef(new Animated.Value(isNew ? 0 : 1)).current;
+  useEffect(() => {
+    if (!isNew) return;
+    Animated.spring(scale, {
+      toValue: 1,
+      tension: 200,
+      friction: 12,
+      useNativeDriver: true,
+    }).start();
+  }, []);
   const base = BADGE_PALETTES[id];
   const p = locked ? { ...LOCKED, center: base.center } : base;
 
@@ -143,6 +156,7 @@ export function BadgeMedal({ id, size, locked = false }: BadgeMedalProps) {
   const showCenter = !locked;
 
   return (
+    <Animated.View style={isNew ? { transform: [{ scale }] } : undefined}>
     <Svg width={size} height={size} viewBox="0 0 512 512">
       <Defs>
         <LinearGradient id={ribbonLId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -243,5 +257,6 @@ export function BadgeMedal({ id, size, locked = false }: BadgeMedalProps) {
       {/* Highlight */}
       <Ellipse cx={225} cy={265} rx={45} ry={22} fill="white" opacity={locked ? 0.12 : 0.18} />
     </Svg>
+    </Animated.View>
   );
 }

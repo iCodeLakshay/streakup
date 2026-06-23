@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useSettingsStore } from '@/stores/settingsStore';
-import { useHabitStore, getBestStreak } from '@/stores/habitStore';
+import { useHabitStore } from '@/stores/habitStore';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -53,8 +53,8 @@ export default function ProfileScreen() {
 
   const { user }                        = useAuthStore();
   const { displayName, avatarUri, setAvatarUri } = useSettingsStore();
-  const habits          = useHabitStore((s) => s.habits);
-  const completions     = useHabitStore((s) => s.completions);
+  const habits      = useHabitStore((s) => s.habits);
+  const completions = useHabitStore((s) => s.completions);
 
   // ── Colors ────────────────────────────────────────────────────────────────
   const bg       = isDark ? '#1F1D1B' : '#FAFAF8';
@@ -71,17 +71,6 @@ export default function ProfileScreen() {
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : null;
-
-  const allTimeCompletions = completions.length;
-
-  const overallBest = habits.reduce(
-    (max, h) => Math.max(max, getBestStreak(h.id, completions)),
-    0
-  );
-
-  const now = new Date();
-  const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const thisMonthCount = completions.filter((c) => c.date.startsWith(monthPrefix)).length;
 
   // Initials for avatar fallback
   const initials = name.slice(0, 2).toUpperCase();
@@ -144,14 +133,6 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Stats grid */}
-        <View style={styles.statsGrid}>
-          <StatCard value={habits.length} label="Habits" surface={surface1} border={border} textPri={textPri} textMut={textMut} />
-          <StatCard value={allTimeCompletions} label="All-time check-ins" surface={surface1} border={border} textPri={textPri} textMut={textMut} />
-          <StatCard value={overallBest} label="Best streak" suffix="d" surface={surface1} border={border} textPri={textPri} textMut={textMut} />
-          <StatCard value={thisMonthCount} label="This month" surface={surface1} border={border} textPri={textPri} textMut={textMut} />
-        </View>
-
         {/* Habits list */}
         {habits.length > 0 && (
           <View style={styles.habitSection}>
@@ -191,24 +172,6 @@ export default function ProfileScreen() {
         )}
 
       </ScrollView>
-    </View>
-  );
-}
-
-// ─── StatCard ─────────────────────────────────────────────────────────────────
-
-function StatCard({
-  value, label, suffix = '', surface, border, textPri, textMut,
-}: {
-  value: number; label: string; suffix?: string;
-  surface: string; border: string; textPri: string; textMut: string;
-}) {
-  return (
-    <View style={[styles.statCard, { backgroundColor: surface, borderColor: border }]}>
-      <Text style={[styles.statValue, { color: textPri }]}>
-        {value}<Text style={[styles.statSuffix, { color: textMut }]}>{suffix}</Text>
-      </Text>
-      <Text style={[styles.statLabel, { color: textMut }]}>{label}</Text>
     </View>
   );
 }
@@ -306,36 +269,6 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans_400Regular',
     fontSize: 12,
     marginTop: 2,
-  },
-
-  // Stats
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    padding: 20,
-  },
-  statCard: {
-    width: '47%',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    paddingVertical: 16,
-    paddingHorizontal: 14,
-    gap: 4,
-  },
-  statValue: {
-    fontFamily: 'DMSans_700Bold',
-    fontSize: 24,
-    lineHeight: 28,
-  },
-  statSuffix: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 16,
-  },
-  statLabel: {
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 12,
-    lineHeight: 16,
   },
 
   // Habits list

@@ -43,11 +43,6 @@ const centerStyles = StyleSheet.create({
     backgroundColor: '#FF740D',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#FF740D',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 8,
   },
   plus: {
     color: '#FFFFFF',
@@ -79,7 +74,7 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: isDark ? '#1A1A1A' : '#FFFFFF',
           borderTopColor: isDark ? '#2A2A2A' : '#F0F0F0',
-          height: 64,
+          height: 68,
           paddingBottom: 8,
           paddingTop: 6,
         },
@@ -94,7 +89,6 @@ export default function TabLayout() {
           marginBottom: 0,
         },
         tabBarItemStyle: {
-          paddingHorizontal: 0,
           minWidth: 48,
           flex: 1,
         },

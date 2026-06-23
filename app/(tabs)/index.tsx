@@ -334,13 +334,13 @@ export default function HomeScreen() {
           { opacity: headerFade, transform: [{ translateY: headerY }] },
         ]}
       >
-        <View>
+        <View style={styles.greetingWrap}>
           {totalCount > 0 && (
             <Text style={[styles.sectionLabel, { color: sectionLabelColor }]}>
               TODAY — {totalCount} {totalCount === 1 ? 'HABIT' : 'HABITS'}
             </Text>
           )}
-          <Text style={[styles.greeting, { color: headerNameColor }]}>{greeting}</Text>
+          <Text style={[styles.greeting, { color: headerNameColor }]} numberOfLines={2}>{greeting}</Text>
         </View>
         <Pressable style={styles.avatar} onPress={() => router.push('/profile' as any)} hitSlop={6}>
           {avatarUri
@@ -416,6 +416,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 12,
   },
+  greetingWrap: {
+    flex: 1,
+    marginRight: 12,
+  },
   sectionLabel: {
     fontFamily: 'DMSans_700Bold',
     fontSize: 11,
@@ -432,6 +436,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF740D',
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
+    flexShrink: 0,
   },
   avatarText: {
     fontFamily: 'DMSans_700Bold', fontSize: 16, color: '#FFFFFF',

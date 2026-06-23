@@ -16,6 +16,7 @@ export interface TargetPickerValue {
 interface TargetPickerProps {
   value: TargetPickerValue;
   onChange: (v: TargetPickerValue) => void;
+  onCustomInputFocus?: () => void;
 }
 
 const TYPE_OPTIONS: { type: TargetType; icon: MaterialIconName; label: string; desc: string }[] = [
@@ -38,7 +39,7 @@ function decodeDays(mask: number): number[] {
   return [0, 1, 2, 3, 4, 5, 6].filter(i => mask & (1 << i));
 }
 
-export function TargetPicker({ value, onChange }: TargetPickerProps) {
+export function TargetPicker({ value, onChange, onCustomInputFocus }: TargetPickerProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -195,6 +196,7 @@ export function TargetPicker({ value, onChange }: TargetPickerProps) {
                 placeholderTextColor={subText}
                 style={[styles.customInput, { backgroundColor: surface, borderColor: border, color: inputText }]}
                 onSubmitEditing={handleCustomSubmit}
+                onFocus={onCustomInputFocus}
                 returnKeyType="done"
                 maxLength={3}
               />

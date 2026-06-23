@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useHabitStore } from '@/stores/habitStore';
@@ -9,6 +10,8 @@ import {
   getLongestStreakStats,
   type EarnedBadge,
 } from '@/utils/achievements';
+
+const SEEN_BADGES_KEY = '@streakup/seen_badges';
 
 const PRIMARY = '#FF740D';
 
@@ -31,6 +34,24 @@ export default function AchievementsScreen() {
 
   const earned = badges.filter((b) => b.earned).length;
 
+  // Track which newly-earned badges the user hasn't seen yet so we can animate them once.
+  const [newBadgeIds, setNewBadgeIds] = useState<Set<string>>(new Set());
+  const savedRef = useRef(false);
+
+  useEffect(() => {
+    if (savedRef.current) return;
+    const earnedIds = badges.filter((b) => b.earned).map((b) => b.id);
+
+    AsyncStorage.getItem(SEEN_BADGES_KEY).then((raw) => {
+      const seen: string[] = raw ? JSON.parse(raw) : [];
+      const unseen = earnedIds.filter((id) => !seen.includes(id));
+      setNewBadgeIds(new Set(unseen));
+      // Persist the full earned list so they won't animate again next visit.
+      AsyncStorage.setItem(SEEN_BADGES_KEY, JSON.stringify(earnedIds));
+      savedRef.current = true;
+    });
+  }, []);
+
   // Show progress only on the first not-yet-earned streak badge (the "next" one).
   const nextBadgeId = badges.find((b) => !b.earned && b.id !== 'perfect-day')?.id;
 
@@ -48,7 +69,7 @@ export default function AchievementsScreen() {
     const showProgress = b.id === nextBadgeId;
     return (
       <View key={b.id} style={styles.cell}>
-        <BadgeMedal id={b.id} size={84} locked={!b.earned} />
+        <BadgeMedal id={b.id} size={84} locked={!b.earned} isNew={newBadgeIds.has(b.id)} />
         <Text
           style={[
             styles.badgeLabel,

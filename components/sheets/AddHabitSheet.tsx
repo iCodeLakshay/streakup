@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Animated, Easing, KeyboardAvoidingView, Modal, Platform,
   Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View,
@@ -37,6 +37,7 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
 
   const slideY = useRef(new Animated.Value(700)).current;
   const bgOpacity = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
   // Prevents a rapid double-tap from submitting twice before the sheet closes.
   const submittingRef = useRef(false);
 
@@ -69,6 +70,10 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
       ]).start();
     }
   }, [visible]);
+
+  const handleCustomInputFocus = useCallback(() => {
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+  }, []);
 
   const canSubmit = name.trim().length > 0;
 
@@ -113,7 +118,7 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
 
       <KeyboardAvoidingView
         style={styles.kavContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
         <Animated.View
@@ -135,6 +140,7 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
           </View>
 
           <ScrollView
+            ref={scrollViewRef}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[styles.scrollBody, { paddingBottom: insets.bottom + 24 }]}
@@ -211,7 +217,7 @@ export function AddHabitSheet({ visible, onClose, onAdd, habitToEdit, onSave }: 
 
             {/* Target */}
             <Text style={[styles.sectionLabel, { color: subLabelColor, marginTop: 20 }]}>TARGET</Text>
-            <TargetPicker value={targetPicker} onChange={setTargetPicker} />
+            <TargetPicker value={targetPicker} onChange={setTargetPicker} onCustomInputFocus={handleCustomInputFocus} />
 
             {/* CTA */}
             <Pressable
@@ -305,7 +311,6 @@ const styles = StyleSheet.create({
     height: 44,
     backgroundColor: '#FF740D',
     borderRadius: 12,
-    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,

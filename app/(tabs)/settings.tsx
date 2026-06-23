@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Alert, Image, Modal, Pressable, ScrollView,
-  StyleSheet, Switch, Text, View,
+  StyleSheet, Text, View,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,18 +10,6 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/stores/authStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { useHabitStore } from '@/stores/habitStore';
-import { getBestStreak } from '@/stores/habitStore';
-import { rescheduleNotifications } from '@/utils/notifications';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const NOTIFICATION_SLOT_OPTIONS: { hour: number; label: string }[] = [
-  { hour: 9,  label: '9am'  },
-  { hour: 13, label: '1pm'  },
-  { hour: 18, label: '6pm'  },
-  { hour: 21, label: '9pm'  },
-];
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -91,10 +79,8 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const isDark = useColorScheme() === 'dark';
 
-  const { user, logout }                                                            = useAuthStore();
-  const { displayName, avatarUri, themeMode, notificationsEnabled, notificationSlots, setThemeMode, setNotificationsEnabled, setNotificationSlots } = useSettingsStore();
-  const habits      = useHabitStore((s) => s.habits);
-  const completions = useHabitStore((s) => s.completions);
+  const { user, logout }                               = useAuthStore();
+  const { displayName, avatarUri, themeMode, setThemeMode } = useSettingsStore();
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -151,22 +137,6 @@ export default function SettingsScreen() {
         <ChevronRight color={textSec} />
       </Pressable>
 
-      {/* ── Overview ── */}
-      <SectionLabel label="OVERVIEW" color={textMut} />
-      <View style={[styles.group, { borderColor: border }]}>
-        <SettingsRow
-          label="Habits"
-          value={String(habits.length)}
-          isDark={isDark} surface1={surface1} border={border} textPri={textPri} textSec={textSec}
-        />
-        <SettingsRow
-          label="Total check-ins"
-          value={String(completions.length)}
-          isDark={isDark} surface1={surface1} border={border} textPri={textPri} textSec={textSec}
-          last
-        />
-      </View>
-
       {/* ── Appearance ── */}
       <SectionLabel label="APPEARANCE" color={textMut} />
       <View style={[styles.group, { borderColor: border }]}>
@@ -176,63 +146,6 @@ export default function SettingsScreen() {
             value={themeMode === 'light'}
             onValueChange={(v) => setThemeMode(v ? 'light' : 'dark')}
           />
-        </View>
-      </View>
-
-      {/* ── Notifications ── */}
-      <SectionLabel label="NOTIFICATIONS" color={textMut} />
-      <View style={[styles.group, { borderColor: border }]}>
-        <SettingsRow
-          label="Daily reminders"
-          isDark={isDark} surface1={surface1} border={border} textPri={textPri} textSec={textSec}
-          right={
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={async (v) => { await setNotificationsEnabled(v); rescheduleNotifications(); }}
-              trackColor={{ false: isDark ? '#3A3835' : '#E8E5E0', true: '#FF740D' }}
-              thumbColor="#FFFFFF"
-            />
-          }
-        />
-        {/* Slot picker row */}
-        <View
-          style={[
-            styles.row,
-            { backgroundColor: surface1, borderTopWidth: 1, borderTopColor: border },
-            { opacity: notificationsEnabled ? 1 : 0.4 },
-          ]}
-          pointerEvents={notificationsEnabled ? 'auto' : 'none'}
-        >
-          <Text style={[styles.rowLabel, { color: textPri }]}>Reminder times</Text>
-          <View style={styles.slotPills}>
-            {NOTIFICATION_SLOT_OPTIONS.map(({ hour, label }) => {
-              const active = notificationSlots.includes(hour);
-              return (
-                <Pressable
-                  key={hour}
-                  style={[
-                    styles.slotPill,
-                    { backgroundColor: active ? '#FF8C00' : surface1, borderColor: active ? '#FF8C00' : border },
-                  ]}
-                  onPress={async () => {
-                    let newSlots: number[];
-                    if (active) {
-                      newSlots = notificationSlots.filter((s) => s !== hour);
-                    } else {
-                      newSlots = [...notificationSlots, hour].sort((a, b) => a - b);
-                    }
-                    if (newSlots.length === 0) return;
-                    await setNotificationSlots(newSlots);
-                    rescheduleNotifications();
-                  }}
-                >
-                  <Text style={[styles.slotPillText, { color: active ? '#FFFFFF' : textSec }]}>
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
         </View>
       </View>
 
@@ -377,24 +290,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 32,
-  },
-
-  // Slot pills
-  slotPills: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  slotPill: {
-    height: 36,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  slotPillText: {
-    fontFamily: 'DMSans_500Medium',
-    fontSize: 13,
   },
 
   // Modal
